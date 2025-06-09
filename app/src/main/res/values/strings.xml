@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Void</string>
+    <string name="accessibility_service_description">Void uses this service to enforce app time limits.</string>
+    <string name="accessibility_description">Void app usage timer</string>
+</resources>

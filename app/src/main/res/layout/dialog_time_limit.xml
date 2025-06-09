@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/dialog_background"
+    android:clipToOutline="true">
+
+
+    <TextView
+        android:id="@+id/dialogTitle"
+        style="@style/AppBaseText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:text=""
+        android:textAlignment="center"
+        android:gravity="center"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    <TextView
+        android:id="@+id/btn1Min"
+        style="@style/AppBaseText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="18dp"
+        android:layout_marginTop="18dp"
+        android:layout_weight="1"
+        android:clickable="true"
+        android:gravity="center"
+        android:text="1 min "
+        app:layout_constraintEnd_toStartOf="@+id/btn2Min"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/dialogTitle" />
+
+    <TextView
+        android:id="@+id/btn2Min"
+        style="@style/AppBaseText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="18dp"
+        android:layout_marginEnd="18dp"
+        android:layout_weight="1"
+        android:clickable="true"
+        android:gravity="center"
+        android:text="2 min "
+        app:layout_constraintBottom_toBottomOf="@+id/btn1Min"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/btn1Min"
+        app:layout_constraintTop_toTopOf="@+id/btn1Min" />
+
+    <TextView
+        android:id="@+id/btn5Min"
+        style="@style/AppBaseText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="18dp"
+        android:layout_marginTop="18dp"
+        android:layout_weight="1"
+        android:clickable="true"
+        android:gravity="center"
+        android:text="5 min "
+        app:layout_constraintBottom_toTopOf="@+id/customTimeInput"
+        app:layout_constraintEnd_toStartOf="@+id/btn10Min"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btn1Min"
+        app:layout_constraintVertical_bias="0.5" />
+
+    <TextView
+        android:id="@+id/btn10Min"
+        style="@style/AppBaseText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="18dp"
+        android:layout_marginEnd="18dp"
+        android:layout_weight="1"
+        android:clickable="true"
+        android:gravity="center"
+        android:text="10 min"
+        app:layout_constraintBottom_toBottomOf="@+id/btn5Min"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/btn5Min"
+        app:layout_constraintTop_toTopOf="@+id/btn5Min" />
+
+    <TextView
+        android:id="@+id/textView4"
+        style="@style/AppBaseText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="18dp"
+        android:text="Custom"
+        app:layout_constraintBottom_toBottomOf="@+id/customTimeInput"
+        app:layout_constraintEnd_toStartOf="@+id/customTimeInput"
+        app:layout_constraintTop_toTopOf="@+id/customTimeInput" />
+
+    <EditText
+        android:id="@+id/customTimeInput"
+        style="@style/AppBaseText"
+        android:layout_width="wrap_content"
+        android:layout_height="45dp"
+        android:layout_marginTop="18dp"
+        android:layout_marginBottom="18dp"
+        android:hint="20"
+        android:inputType="number"
+        app:layout_constraintBottom_toTopOf="@+id/btnClose"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btn5Min"
+        app:layout_constraintVertical_bias="0.5" />
+
+    <TextView
+        android:id="@+id/textView7"
+        style="@style/AppBaseText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="18dp"
+        android:text="min"
+        app:layout_constraintBottom_toBottomOf="@+id/customTimeInput"
+        app:layout_constraintStart_toEndOf="@+id/customTimeInput"
+        app:layout_constraintTop_toTopOf="@+id/customTimeInput" />
+
+    <Button
+        android:id="@+id/btnClose"
+        style="@style/AppBaseText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="18dp"
+        android:background="@drawable/button_outline_white"
+        android:text="Close"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/customTimeInput"
+        app:layout_constraintVertical_bias="0.5" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

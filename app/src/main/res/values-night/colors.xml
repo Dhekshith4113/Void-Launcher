@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="divider_grey">#FF222222</color>
+    <color name="new_app_indicator">#FF888888</color>
+    <color name="textColorPrimary">#FFFFFF</color>
+    <color name="backgroundColor">#000000</color>
+</resources>
