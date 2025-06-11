@@ -10,12 +10,16 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -27,13 +31,40 @@ class AppDrawerAdapter(
     private val pm: PackageManager,
     private var appList: MutableList<ApplicationInfo>,
     private val onSave: (List<ApplicationInfo>) -> Unit,
-    private val refreshAppList: () -> Unit,
+    val refreshList: () -> Unit,
+    var onAppDragStarted: ((ApplicationInfo) -> Unit)? = null,
     private val onAppClick: (ApplicationInfo) -> Unit
 ) : RecyclerView.Adapter<AppDrawerAdapter.ViewHolder>() {
+
+    private val drawerAppSize: Int = MainActivity().drawerSize
+
+    companion object {
+        const val DROP_INDICATOR_PACKAGE = "__DROP_INDICATOR__"
+
+        fun getDropIndicatorItem(): ApplicationInfo {
+            val dummy = ApplicationInfo()
+            dummy.packageName = DROP_INDICATOR_PACKAGE
+            return dummy
+        }
+    }
 
     @SuppressLint("ClickableViewAccessibility")
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val icon: ImageView = view.findViewById(R.id.appIcon)
+
+        fun scaleFadeIn() {
+            itemView.animate().cancel()
+            itemView.scaleX = 0.8f
+            itemView.scaleY = 0.8f
+            itemView.alpha = 0f
+            itemView.animate()
+                .scaleX(1f)
+                .scaleY(1f)
+                .alpha(1f)
+                .setDuration(200)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
 
         private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
@@ -73,15 +104,71 @@ class AppDrawerAdapter(
 
     override fun getItemCount(): Int = appList.size
 
+    override fun getItemViewType(position: Int): Int {
+        return if (appList[position].packageName == DROP_INDICATOR_PACKAGE) 1 else 0
+    }
+
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val app = appList[position]
-        holder.icon.setImageDrawable(app.loadIcon(pm))
+        if (app.packageName == DROP_INDICATOR_PACKAGE) {
+            holder.icon.setImageResource(0)
+            holder.icon.setBackgroundResource(R.drawable.drop_indicator)
+            holder.itemView.setOnLongClickListener(null)
+            holder.scaleFadeIn() // Add fade-in effect
+        } else {
+            holder.icon.setBackgroundResource(0)
+            holder.icon.setImageDrawable(app.loadIcon(pm))
+            holder.itemView.setOnLongClickListener {
+                val clipData = ClipData.newPlainText("packageName", app.packageName)
+                val shadow = View.DragShadowBuilder(it)
+                it.startDragAndDrop(clipData, shadow, app, 0)
+                onAppDragStarted?.invoke(app) // Notify removal if dragging from drawer
+                true
+            }
+        }
+    }
 
-        holder.itemView.setOnLongClickListener {
-            val clipData = ClipData.newPlainText("packageName", app.packageName)
-            val shadow = View.DragShadowBuilder(it)
-            it.startDragAndDrop(clipData, shadow, app, 0)
-            true
+    fun insertDropIndicator(position: Int) {
+        if (appList.any { it.packageName == DROP_INDICATOR_PACKAGE }) return
+        val dummy = ApplicationInfo().apply { packageName = DROP_INDICATOR_PACKAGE }
+        appList.add(position, dummy)
+        notifyItemInserted(position)
+    }
+
+    fun moveDropIndicator(toPosition: Int) {
+        val dropIndex = appList.indexOfFirst { it.packageName == DROP_INDICATOR_PACKAGE }
+
+        if (dropIndex == toPosition) return // already at right spot
+
+        if (dropIndex != -1) {
+//            animateMove(dropIndex, toPosition)
+            appList.removeAt(dropIndex)
+            notifyItemRemoved(dropIndex)
+        }
+
+        val safePosition = toPosition.coerceIn(0, appList.size)
+        appList.add(safePosition, getDropIndicatorItem())
+        notifyItemInserted(safePosition)
+    }
+
+//    fun removeDropIndicator() {
+//        val index = appList.indexOfFirst { it.packageName == DROP_INDICATOR_PACKAGE }
+//        if (index != -1) {
+//            appList.removeAt(index)
+//            notifyItemRemoved(index)
+//        }
+//    }
+
+    fun removeDropIndicator() {
+        val index = appList.indexOfFirst { it.packageName == DROP_INDICATOR_PACKAGE }
+        if (index != -1) {
+            appList.removeAt(index)
+            notifyItemRemoved(index)
+
+            // Force sync
+            Handler(Looper.getMainLooper()).post {
+                notifyDataSetChanged()
+            }
         }
     }
 
@@ -107,7 +194,7 @@ class AppDrawerAdapter(
             val packageUri = Uri.parse("package:${appInfo.packageName}") // Replace with target package
             val intent = Intent(Intent.ACTION_DELETE, packageUri)
             context.startActivity(intent)
-            refreshAppList()
+            refreshList()
             dialog.dismiss()
         }
 
@@ -127,24 +214,14 @@ class AppDrawerAdapter(
     }
 
     fun addAppAtPosition(app: ApplicationInfo, position: Int) {
-        if (appList.any { it.packageName == app.packageName } || appList.size >= 4) return
+        if (appList.any { it.packageName == app.packageName } || appList.size >= drawerAppSize) return
         appList.add(position.coerceIn(0, appList.size), app)
         notifyItemInserted(position)
         onSave(appList)
     }
 
-    fun addAppAt(app: ApplicationInfo, index: Int) {
-        if (appList.any { it.packageName == app.packageName } || appList.size >= 4) return
-
-        val insertIndex = index.coerceIn(0, appList.size)
-        appList.add(insertIndex, app)
-        notifyItemInserted(insertIndex)
-        onSave(appList)
-    }
-
-
     fun addApp(app: ApplicationInfo) {
-        if ((appList.none { it.packageName == app.packageName }) && appList.size < 4) {
+        if ((appList.none { it.packageName == app.packageName }) && appList.size < drawerAppSize) {
             appList.add(app)
             appList.sortBy { it.loadLabel(pm).toString().lowercase() }
             notifyDataSetChanged()

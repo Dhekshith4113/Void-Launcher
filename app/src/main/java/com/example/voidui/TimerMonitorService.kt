@@ -44,7 +44,7 @@ class TimerMonitorService : Service() {
 //                        val manager = getSystemService(NotificationManager::class.java)
 //                        manager.cancel(1) // Cancel the timer notification
                         AppTimerManager.markExpired(currentApp)
-                        AppAccessibilityService.instance?.goHomeScreen()
+                        AppAccessibilityService.goHomeScreen()
                         stopForeground(true)
                     } else {
                         Log.d("TimerMonitor", "$currentApp: already marked expired, showing overlay")

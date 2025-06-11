@@ -50,7 +50,7 @@ class InAppTimerReminderActivity : AppCompatActivity() {
         updateAppListVisibility(globalToggle.isChecked)
 
         accessibilityLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            if (isAccessibilityServiceEnabled()) {
+            if (AppAccessibilityService.isAccessibilityServiceEnabled()) {
                 SharedPreferencesManager.setGlobalTimerEnabled(this, true)
                 globalToggle.isChecked = true
                 updateAppListVisibility(true)
@@ -63,7 +63,7 @@ class InAppTimerReminderActivity : AppCompatActivity() {
 
         globalToggle.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                if (!isAccessibilityServiceEnabled()) {
+                if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
                     accessibilityLauncher.launch(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 } else {
                     SharedPreferencesManager.setGlobalTimerEnabled(this, true)
@@ -75,26 +75,9 @@ class InAppTimerReminderActivity : AppCompatActivity() {
             }
         }
 
-//        val appList = getAllLaunchableApps()
-////        val allApps: List<ApplicationInfo> = getInstalledApps()
-//        val context = this // your activity or application context
-//
-//        val onApps = appList.filter {
-//            SharedPreferencesManager.isAppTimerEnabled(context, it.packageName)
-//        }.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
-//
-//        val offApps = appList.filter {
-//            !SharedPreferencesManager.isAppTimerEnabled(context, it.packageName)
-//        }.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
-//
-//        val sortedApps = onApps + offApps
-//        adapter = AppToggleAdapter(sortedApps)
-
         adapter = AppToggleAdapter(getSortedApps()) {
             refreshList()
         }
-
-//        adapter = AppToggleAdapter(appList)
         appRecyclerView.layoutManager = LinearLayoutManager(this)
         appRecyclerView.adapter = adapter
     }
@@ -147,16 +130,6 @@ class InAppTimerReminderActivity : AppCompatActivity() {
                         it.packageName != currentPackage // exclude "Void" itself
             }
             .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
-    }
-
-    private fun isAccessibilityServiceEnabled(): Boolean {
-        val expectedComponent = "${packageName}/${AppAccessibilityService::class.java.name}"
-        val enabledServices = Settings.Secure.getString(
-            contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-
-        return enabledServices.split(":").any { it.equals(expectedComponent, ignoreCase = true) }
     }
 
 }

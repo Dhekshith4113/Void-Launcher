@@ -27,7 +27,8 @@ class AppListAdapter(
     private val context: Context,
     private var apps: MutableList<ApplicationInfo>,
     private val pm: PackageManager,
-    private val refreshAppList: () -> Unit,
+    val refreshList: () -> Unit,
+    var onAppDragStarted: ((ApplicationInfo) -> Unit)? = null,
     private val onAppClick: (ApplicationInfo) -> Unit
 ) : RecyclerView.Adapter<AppListAdapter.ViewHolder>() {
 
@@ -90,6 +91,7 @@ class AppListAdapter(
             val clipData = ClipData.newPlainText("packageName", app.packageName)
             val shadow = AppIconDragShadowBuilder(context, app)
             it.startDragAndDrop(clipData, shadow, app, 0)
+            onAppDragStarted?.invoke(app)
             true
         }
     }
@@ -113,19 +115,11 @@ class AppListAdapter(
 
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
-//        dialogView.findViewById<TextView>(R.id.uninstallBtn).setOnClickListener {
-//            Toast.makeText(context, "Tap 'Uninstall' in the App Info screen", Toast.LENGTH_LONG).show()
-//            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-//                data = Uri.parse("package:${appInfo.packageName}")
-//            }
-//            context.startActivity(intent)
-//        }
-
         dialogView.findViewById<TextView>(R.id.uninstallBtn).setOnClickListener {
             val packageUri = Uri.parse("package:${appInfo.packageName}") // Replace with target package
             val intent = Intent(Intent.ACTION_DELETE, packageUri)
             context.startActivity(intent)
-            refreshAppList()
+            refreshList()
             dialog.dismiss()
         }
 
@@ -169,23 +163,29 @@ class AppListAdapter(
 
 }
 
-class AppIconDragShadowBuilder(context: Context, appInfo: ApplicationInfo) :
+class AppIconDragShadowBuilder(val context: Context, appInfo: ApplicationInfo) :
     View.DragShadowBuilder() {
 
     private val icon: Drawable
+    private val sizeInDP: Int = 48
 
     init {
         val pm = context.packageManager
         icon = appInfo.loadIcon(pm)
-        icon.setBounds(0, 0, icon.intrinsicWidth, icon.intrinsicHeight)
+        icon.setBounds(0, 0, sizeInDP.toPx(context), sizeInDP.toPx(context))
     }
 
     override fun onProvideShadowMetrics(size: Point, touch: Point) {
-        size.set(icon.intrinsicWidth, icon.intrinsicHeight)
+        size.set(sizeInDP.toPx(context), sizeInDP.toPx(context))
         touch.set(size.x / 2, size.y / 2)
     }
 
     override fun onDrawShadow(canvas: Canvas) {
         icon.draw(canvas)
     }
+
+    private fun Int.toPx(context: Context): Int {
+        return (this * context.resources.displayMetrics.density).toInt()
+    }
+
 }

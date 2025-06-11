@@ -1,15 +1,12 @@
 package com.example.voidui
 
-import android.app.Activity
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.IBinder
-import android.provider.Settings
 import android.util.Log
 import kotlinx.coroutines.*
 import java.text.DecimalFormat
@@ -49,7 +46,6 @@ class SpeedMonitorService : Service() {
                 notificationHelper.updateNetStatNotification(updatedNotification)
 
                 delay(1000) // Update every second
-
             }
         }
     }

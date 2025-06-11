@@ -35,6 +35,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.DragStartHelper
+import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -49,7 +51,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var drawerRecyclerView: RecyclerView
 
     private val requestCodePostNotifications = 1001
-    private var needsRefresh = false
+    private var needRefresh = false
+    private var toastShownThisDrag = false
+    private var shouldMoveIndicator = true
+    val drawerSize = 4
 
     @SuppressLint("ClickableViewAccessibility")
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -58,19 +63,20 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        if (!isAccessibilityServiceEnabled()) {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        }
-
         if (!UsageStatsManagerUtils.hasUsageStatsPermission(this)) {
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
         }
 
+        val prefsInstalledApps = getSharedPreferences("installed_apps", MODE_PRIVATE)
+        val firstTime = prefsInstalledApps.getBoolean("first_time", false)
+
+        if (!firstTime) {
+            saveListApps(loadListApps())
+            prefsInstalledApps.edit().putBoolean("first_time", true).apply()
+        }
+
         val prefs = getSharedPreferences("minima_prefs", MODE_PRIVATE)
         val askedForNotifications = prefs.getBoolean("asked_notifications", false)
-
-        val prefsInstalledApps = getSharedPreferences("installed_apps", MODE_PRIVATE)
-        prefsInstalledApps.edit().putStringSet("apps", getInstalledAppPackages().toSet()).apply()
 
         recyclerView = findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -94,11 +100,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        listAdapter = AppListAdapter(this, loadListApps().toMutableList(), packageManager,
-            refreshAppList = {
-                needsRefresh = true
-            }
-        ) { appInfo ->
+        if (SharedPreferencesManager.isSwitchTrackEnabled(this)) {
+            val intent = Intent(this, SpeedMonitorService::class.java)
+            startForegroundService(intent)
+        }
+
+        listAdapter = AppListAdapter(this, loadListApps().toMutableList(), packageManager, refreshList = {
+            needRefresh =true
+        }) { appInfo ->
             val packageName = appInfo.packageName
             if (shouldShowTimer(this, packageName)) {
                 showTimeLimitDialog(appInfo)
@@ -107,16 +116,24 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        listAdapter.setApps(getNewlyInstalledApps())
-
         recyclerView.adapter = listAdapter
 
-        drawerRecyclerView = findViewById(R.id.appDrawerRecyclerView)
-        drawerAdapter = AppDrawerAdapter(this, packageManager, loadDrawerApps().toMutableList(), ::saveDrawerApps,
-            refreshAppList = {
-                needsRefresh = true
+        listAdapter.onAppDragStarted = { app ->
+            val currentApps = listAdapter.getApps()
+            val index = currentApps.indexOfFirst { it.packageName == app.packageName }
+            if (index != -1) {
+                // Clone list to preserve order
+                val updatedList = currentApps.toMutableList()
+                updatedList.removeAt(index)
+//                updatedList.add(index, AppDrawerAdapter.getDropIndicatorItem())
+                listAdapter.updateData(updatedList)
             }
-        ) { appInfo ->
+        }
+
+        drawerRecyclerView = findViewById(R.id.appDrawerRecyclerView)
+        drawerAdapter = AppDrawerAdapter(this, packageManager, loadDrawerApps().toMutableList(), ::saveDrawerApps, refreshList = {
+            needRefresh = true
+        }) { appInfo ->
             val packageName = appInfo.packageName
             if (shouldShowTimer(this, packageName)) {
                 showTimeLimitDialog(appInfo)
@@ -131,6 +148,8 @@ class MainActivity : AppCompatActivity() {
             adapter = drawerAdapter
         }
 
+        drawerRecyclerView.itemAnimator = null
+
         drawerRecyclerView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
                 drawerRecyclerView.viewTreeObserver.removeOnGlobalLayoutListener(this)
@@ -138,78 +157,142 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
-            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT, 0
-        ) {
-            override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
-            ): Boolean {
-                val fromPos = viewHolder.adapterPosition
-                val toPos = target.adapterPosition
-                drawerAdapter.swapItems(fromPos, toPos)
-                return true
-            }
-
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                // No swipe action
-            }
-
-            override fun isLongPressDragEnabled(): Boolean {
-                return true
+        drawerAdapter.onAppDragStarted = { app ->
+            val currentApps = drawerAdapter.getApps()
+            val index = currentApps.indexOfFirst { it.packageName == app.packageName }
+            if (index != -1) {
+                // Clone list to preserve order
+                val updatedList = currentApps.toMutableList()
+                updatedList.removeAt(index)
+                updatedList.add(index, AppDrawerAdapter.getDropIndicatorItem())
+                drawerAdapter.updateData(updatedList)
             }
         }
 
-        val itemTouchHelper = ItemTouchHelper(itemTouchHelperCallback)
-        itemTouchHelper.attachToRecyclerView(drawerRecyclerView)
+//        val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
+//            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT, 0
+//        ) {
+//            override fun onMove(
+//                recyclerView: RecyclerView,
+//                viewHolder: RecyclerView.ViewHolder,
+//                target: RecyclerView.ViewHolder
+//            ): Boolean {
+//                val fromPos = viewHolder.adapterPosition
+//                val toPos = target.adapterPosition
+//                drawerAdapter.swapItems(fromPos, toPos)
+//                return true
+//            }
+//
+//            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+//                // No swipe action
+//            }
+//
+//            override fun isLongPressDragEnabled(): Boolean {
+//                return true
+//            }
+//        }
+
+//        val itemTouchHelper = ItemTouchHelper(itemTouchHelperCallback)
+//        itemTouchHelper.attachToRecyclerView(drawerRecyclerView)
 
         drawerRecyclerView.setOnDragListener { view, event ->
             when (event.action) {
 
                 DragEvent.ACTION_DRAG_ENTERED -> {
-                    view.setBackgroundColor(Color.parseColor("#FF121212"))
+//                    view.setBackgroundColor(getColor(R.color.divider_grey))
+
+                    // Only insert if not already inserted
+                    if (!drawerAdapter.getApps().any { it.packageName == AppDrawerAdapter.DROP_INDICATOR_PACKAGE }) {
+                        drawerAdapter.insertDropIndicator(0)
+                    }
                     true
                 }
 
-                DragEvent.ACTION_DROP -> {
-                    val app = event.localState as ApplicationInfo
+                DragEvent.ACTION_DRAG_LOCATION -> {
+                    val x = event.x.toInt()
                     val recyclerView = view as RecyclerView
 
-                    // Prevent duplicate addition or overfilling
-                    if (drawerAdapter.getApps().any { it.packageName == app.packageName } || drawerAdapter.getApps().size >= 4) {
-                        Toast.makeText(this, "Cannot add more than 4 apps", Toast.LENGTH_SHORT).show()
+                    val draggedApp = event.localState as ApplicationInfo
+                    val isAppFromDrawer = !listAdapter.getApps().contains(draggedApp)
+                    if (!isAppFromDrawer && (drawerAdapter.getApps().size >= drawerSize+1)) {
+                        if (!toastShownThisDrag) {
+                            drawerAdapter.removeDropIndicator()
+                            Toast.makeText(this, "Cannot add more than $drawerSize apps", Toast.LENGTH_SHORT).show()
+                            shouldMoveIndicator = false
+                            toastShownThisDrag = true
+                        }
                         return@setOnDragListener true
                     }
 
-                    val x = event.x.toInt()
-                    var insertPosition = drawerAdapter.itemCount // default to end
+                    var targetPos = -1
 
-                    // Find the drop position by comparing x with midpoints of each child
+                    // Find the hovered child
                     for (i in 0 until recyclerView.childCount) {
                         val child = recyclerView.getChildAt(i)
                         val left = child.left
                         val right = child.right
-                        val midpoint = (left + right) / 2
 
-                        if (x < midpoint) {
-                            insertPosition = recyclerView.getChildAdapterPosition(child)
+                        if (x in left..right) {
+                            targetPos = recyclerView.getChildAdapterPosition(child)
                             break
                         }
                     }
 
-                    drawerAdapter.addAppAtPosition(app, insertPosition)
-                    listAdapter.removeApp(app)
-                    saveDrawerApps(drawerAdapter.getApps())
-                    saveListApps(listAdapter.getApps())
+                    if (targetPos != -1) {
+                        // Only move if we're not already at that position
+                        val currentDropIndex = drawerAdapter.getApps().indexOfFirst {
+                            it.packageName == AppDrawerAdapter.DROP_INDICATOR_PACKAGE
+                        }
 
-                    drawerRecyclerView.invalidateItemDecorations()
+                        if (currentDropIndex != targetPos && shouldMoveIndicator) {
+                            drawerAdapter.moveDropIndicator(targetPos)
+                        }
+                    }
 
                     true
                 }
 
-                DragEvent.ACTION_DRAG_ENDED, DragEvent.ACTION_DRAG_EXITED -> {
-                    view.setBackgroundColor(Color.TRANSPARENT)
+                DragEvent.ACTION_DROP -> {
+                    val draggedApp = event.localState as ApplicationInfo
+
+                    val dropIndex = drawerAdapter.getApps().indexOfFirst {
+                        it.packageName == AppDrawerAdapter.DROP_INDICATOR_PACKAGE
+                    }.takeIf { it != -1 } ?: drawerAdapter.itemCount
+
+                    drawerAdapter.removeDropIndicator()
+
+                    // Check if app was already in the drawer
+                    val isAppFromDrawer = !listAdapter.getApps().contains(draggedApp)
+                    if (view == drawerRecyclerView) {
+                        // Reorder or return to drawer
+                        if (!isAppFromDrawer && drawerAdapter.getApps().size >= drawerSize) {
+                            return@setOnDragListener true
+                        } else {
+                            if (!isAppFromDrawer) {
+                                // Moved from list to drawer
+                                listAdapter.removeApp(draggedApp)
+                            }
+                            drawerAdapter.addAppAtPosition(draggedApp, dropIndex)
+                        }
+                    } else {
+                        // Dropped into main app list, remove from drawer
+                        if (isAppFromDrawer) {
+                            drawerAdapter.removeApp(draggedApp)
+                            listAdapter.addApp(draggedApp)
+                        }
+                    }
+
+                    saveDrawerApps(drawerAdapter.getApps())
+                    saveListApps(listAdapter.getApps())
+                    drawerRecyclerView.invalidateItemDecorations()
+                    true
+                }
+
+                DragEvent.ACTION_DRAG_EXITED, DragEvent.ACTION_DRAG_ENDED -> {
+                    drawerAdapter.removeDropIndicator()
+//                    view.setBackgroundColor(Color.TRANSPARENT)
+                    toastShownThisDrag = false
+                    shouldMoveIndicator = true
                     true
                 }
 
@@ -219,12 +302,19 @@ class MainActivity : AppCompatActivity() {
 
         recyclerView.setOnDragListener { _, event ->
             when (event.action) {
+
                 DragEvent.ACTION_DROP -> {
                     val app = event.localState as ApplicationInfo
                     drawerAdapter.removeApp(app)
                     listAdapter.addApp(app)
                     saveDrawerApps(drawerAdapter.getApps())
                     saveListApps(listAdapter.getApps())
+                    true
+                }
+
+                DragEvent.ACTION_DRAG_EXITED -> {
+                    val app = event.localState as ApplicationInfo
+                    listAdapter.addApp(app)
                     true
                 }
                 else -> true
@@ -268,11 +358,97 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         clearExpiredNewAppTags()
-        checkForNewlyInstalledApps()
-//        if (needsRefresh) {
-        refreshList()
-//            needsRefresh = false
-//        }
+        checkNewlyInstalledApps()
+        if (needRefresh) {
+            listAdapter.setApps(getNewlyInstalledApps())
+            listAdapter.updateData(loadListApps().toMutableList())
+            drawerAdapter.updateData(loadDrawerApps().toMutableList())
+            needRefresh =false
+        }
+    }
+
+    private fun checkNewlyInstalledApps() {
+        val prefsNewApps = getSharedPreferences("new_apps", MODE_PRIVATE)
+        val prefsList = getSharedPreferences("list_prefs", MODE_PRIVATE)
+        val prefsDrawer = getSharedPreferences("drawer_prefs", MODE_PRIVATE)
+        val currentAppList = prefsList.getStringSet("list_packages", emptySet()) ?: emptySet()
+        val currentDrawerList = prefsDrawer.getString("drawer_ordered_packages", "")?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+
+        val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+        val userManager = getSystemService(Context.USER_SERVICE) as UserManager
+        val users = userManager.userProfiles
+        val currentPackage = applicationContext.packageName
+        val newAppInfoList = mutableListOf<ApplicationInfo>()
+        val newAppList = mutableListOf<String>()
+
+        for (user in users) {
+            val activities = launcherApps.getActivityList(null, user as UserHandle)
+            for (activity in activities) {
+                if (activity.applicationInfo.packageName != currentPackage) {   // exclude "Void" itself
+                    newAppInfoList.add(activity.applicationInfo)
+                    newAppList.add(activity.applicationInfo.packageName)
+                }
+            }
+        }
+
+        newAppInfoList.filter { packageManager.getLaunchIntentForPackage(it.packageName) != null &&
+                it.packageName in currentDrawerList
+        }.sortedBy {
+            it.loadLabel(packageManager).toString().lowercase()
+        }
+
+        val newApps = newAppList.filterNot { it in currentAppList || it in currentDrawerList.toSet() }
+        Log.d("App List", "Current App List = $currentAppList")
+        Log.d("App List", "New App List = $newAppList")
+        Log.d("App List", "New Apps = $newApps")
+        if (newApps.isNotEmpty()) {
+            val editor = prefsNewApps.edit()
+            val timestamp = System.currentTimeMillis()
+
+            newApps.forEach { pkg ->
+                editor.putLong("new_app_time_$pkg", timestamp)
+            }
+
+            editor.apply()
+            prefsNewApps.edit().putStringSet("new_app_name", newApps.toSet()).apply()
+            saveListApps(newAppInfoList)
+        }
+        needRefresh = true
+    }
+
+    private fun getNewlyInstalledApps(): Set<String> {
+        val prefs = getSharedPreferences("new_apps", MODE_PRIVATE)
+        val allEntries = prefs.all
+        println(allEntries)
+        val now = System.currentTimeMillis()
+        val oneDayMillis = 12 * 60 * 60 * 1000L
+
+        return allEntries
+            .filterKeys { it.startsWith("new_app_time_") }
+            .mapNotNull { entry ->
+                val pkg = entry.key.removePrefix("new_app_time_")
+                val time = entry.value as? Long ?: return@mapNotNull null
+                if (now - time < oneDayMillis) pkg else null
+            }
+            .toSet()
+    }
+
+    private fun clearExpiredNewAppTags() {
+        val prefs = getSharedPreferences("new_apps", MODE_PRIVATE)
+        val editor = prefs.edit()
+        val now = System.currentTimeMillis()
+        val halfDayMillis = 12 * 60 * 60 * 1000L
+
+        prefs.all.forEach { (key, value) ->
+            if (key.startsWith("new_app_time_")) {
+                val time = value as? Long ?: return@forEach
+                if (now - time >= halfDayMillis) {
+                    editor.remove(key)
+                }
+            }
+        }
+
+        editor.apply()
     }
 
     override fun onRequestPermissionsResult(
@@ -285,12 +461,6 @@ class MainActivity : AppCompatActivity() {
             val prefs = getSharedPreferences("minima_prefs", MODE_PRIVATE)
             checkAndPromptNotificationSettings(prefs)
         }
-    }
-
-    private fun refreshList() {
-        listAdapter.updateData(loadListApps().toMutableList())
-        drawerAdapter.updateData(loadDrawerApps().toMutableList())
-        listAdapter.setApps(getNewlyInstalledApps())
     }
 
     private fun checkAndPromptNotificationSettings(prefs: SharedPreferences) {
@@ -309,16 +479,6 @@ class MainActivity : AppCompatActivity() {
                 .show()
         }
         prefs.edit().putBoolean("asked_notifications", true).apply()
-    }
-
-    private fun isAccessibilityServiceEnabled(): Boolean {
-        val expectedComponent = "${packageName}/${AppAccessibilityService::class.java.name}"
-        val enabledServices = Settings.Secure.getString(
-            contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-
-        return enabledServices.split(":").any { it.equals(expectedComponent, ignoreCase = true) }
     }
 
     private fun shouldShowTimer(context: Context, packageName: String): Boolean {
@@ -431,7 +591,7 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("list_prefs", MODE_PRIVATE)
         val packageNames = prefs.getStringSet("list_packages", emptySet()) ?: emptySet()
 
-        Log.d("loadListApps", "packageNames = $packageNames")
+        Log.d("loadListApps", "$packageNames")
 
         val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
         val userManager = getSystemService(Context.USER_SERVICE) as UserManager
@@ -470,71 +630,6 @@ class MainActivity : AppCompatActivity() {
 
             return listApps.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
         }
-    }
-
-    private fun checkForNewlyInstalledApps() {
-        val prefs = getSharedPreferences("installed_apps", MODE_PRIVATE)
-        val prevAppSet = prefs.getStringSet("apps", emptySet()) ?: emptySet()
-        val currentAppSet = getInstalledAppPackages().toSet()
-
-        val newlyInstalled = currentAppSet - prevAppSet
-
-        if (newlyInstalled.isNotEmpty()) {
-            val editor = prefs.edit()
-            val timestamp = System.currentTimeMillis()
-
-            newlyInstalled.forEach { pkg ->
-                editor.putLong("new_app_time_$pkg", timestamp)
-            }
-
-            editor.apply()
-            needsRefresh = true
-        }
-
-        // Always update the installed app set
-        prefs.edit().putStringSet("apps", currentAppSet).apply()
-    }
-
-    private fun getInstalledAppPackages(): List<String> {
-        val pm = packageManager
-        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-        return apps
-            .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
-            .map { it.packageName }
-    }
-
-    private fun getNewlyInstalledApps(): Set<String> {
-        val prefs = getSharedPreferences("installed_apps", MODE_PRIVATE)
-        val allEntries = prefs.all
-        val now = System.currentTimeMillis()
-        val oneDayMillis = 24 * 60 * 60 * 1000L
-
-        return allEntries
-            .filterKeys { it.startsWith("new_app_time_") }
-            .mapNotNull { entry ->
-                val pkg = entry.key.removePrefix("new_app_time_")
-                val time = entry.value as? Long ?: return@mapNotNull null
-                if (now - time < oneDayMillis) pkg else null
-            }
-            .toSet()
-    }
-
-    private fun clearExpiredNewAppTags() {
-        val prefs = getSharedPreferences("installed_apps", MODE_PRIVATE)
-        val editor = prefs.edit()
-        val now = System.currentTimeMillis()
-        val oneDayMillis = 24 * 60 * 60 * 1000L
-
-        prefs.all.forEach { (key, value) ->
-            if (key.startsWith("new_app_time_")) {
-                val time = value as? Long ?: return@forEach
-                if (now - time >= oneDayMillis) {
-                    editor.remove(key)
-                }
-            }
-        }
-
-        editor.apply()
     }
 
     private fun vibratePhone() {

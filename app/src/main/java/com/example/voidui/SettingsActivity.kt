@@ -16,6 +16,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.SwitchCompat
@@ -282,12 +284,13 @@ class SettingsActivity : AppCompatActivity() {
             .setCancelable(true)
             .create()
 
-        dialogView.findViewById<SwitchCompat>(R.id.switchTrack).isChecked = SharedPreferencesManager.isSwitchTrackEnabled(this)
+        val switchTrack = dialogView.findViewById<SwitchCompat>(R.id.switchTrack)
+        switchTrack.isChecked = SharedPreferencesManager.isSwitchTrackEnabled(this)
 
         populateUsageTable(dialogView)
 
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialogView.findViewById<SwitchCompat>(R.id.switchTrack).setOnCheckedChangeListener { _, isChecked ->
+        switchTrack.setOnCheckedChangeListener { _, isChecked ->
             SharedPreferencesManager.setSwitchTrackEnabled(this, isChecked)
             if (isChecked) {
                 val intent = Intent(this, SpeedMonitorService::class.java)
@@ -379,26 +382,31 @@ class SettingsActivity : AppCompatActivity() {
             .setCancelable(true)
             .create()
 
-        dialogView.findViewById<SwitchCompat>(R.id.lockSwitch).isChecked = SharedPreferencesManager.isSwipeToLockEnabled(this)
-        dialogView.findViewById<SwitchCompat>(R.id.settingsSwitch).isChecked = SharedPreferencesManager.isSwipeToSettingsEnabled(this)
-        dialogView.findViewById<SwitchCompat>(R.id.doubleTapSwitch).isChecked = SharedPreferencesManager.isDoubleTapToLockEnabled(this)
+        val lockSwitch = dialogView.findViewById<SwitchCompat>(R.id.lockSwitch)
+        val settingsSwitch = dialogView.findViewById<SwitchCompat>(R.id.settingsSwitch)
+        val doubleTapSwitch = dialogView.findViewById<SwitchCompat>(R.id.doubleTapSwitch)
+
+        lockSwitch.isChecked = SharedPreferencesManager.isSwipeToLockEnabled(this)
+        settingsSwitch.isChecked = SharedPreferencesManager.isSwipeToSettingsEnabled(this)
+        doubleTapSwitch.isChecked = SharedPreferencesManager.isDoubleTapToLockEnabled(this)
 
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
-        dialogView.findViewById<SwitchCompat>(R.id.lockSwitch).setOnCheckedChangeListener { _, isChecked ->
-            SharedPreferencesManager.setSwipeToLockEnabled(this, isChecked)
+        lockSwitch.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                if (!isAccessibilityServiceEnabled()) {
+                if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
                     startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 } else {
+                    SharedPreferencesManager.setSwipeToLockEnabled(this, true)
                     Toast.makeText(this, "'Swipe right to lock phone' is enabled", Toast.LENGTH_SHORT).show()
                 }
             } else {
+                SharedPreferencesManager.setSwipeToLockEnabled(this, false)
                 Toast.makeText(this, "'Swipe right to lock phone' is disabled", Toast.LENGTH_SHORT).show()
             }
         }
 
-        dialogView.findViewById<SwitchCompat>(R.id.settingsSwitch).setOnCheckedChangeListener { _, isChecked ->
+        settingsSwitch.setOnCheckedChangeListener { _, isChecked ->
             SharedPreferencesManager.setSwipeToSettingsEnabled(this, isChecked)
             if (isChecked) {
                 Toast.makeText(this, "'Swipe left to open settings' is enabled", Toast.LENGTH_SHORT).show()
@@ -407,30 +415,20 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        dialogView.findViewById<SwitchCompat>(R.id.doubleTapSwitch).setOnCheckedChangeListener { _, isChecked ->
+        doubleTapSwitch.setOnCheckedChangeListener { _, isChecked ->
             SharedPreferencesManager.setDoubleTapToLockEnabled(this, isChecked)
             if (isChecked) {
-                if (!isAccessibilityServiceEnabled()) {
+                if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
                     startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 } else {
-                    Toast.makeText(this, "'Double tap on mini drawer to lock phone' is enabled", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "'Double tap to lock phone' is enabled", Toast.LENGTH_SHORT).show()
                 }
             } else {
-                Toast.makeText(this, "'Double tap on mini drawer to lock phone' is disabled", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "'Double tap to lock phone' is disabled", Toast.LENGTH_SHORT).show()
             }
         }
 
         dialog.show()
-    }
-
-    private fun isAccessibilityServiceEnabled(): Boolean {
-        val expectedComponent = "${packageName}/${AppAccessibilityService::class.java.name}"
-        val enabledServices = Settings.Secure.getString(
-            contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-
-        return enabledServices.split(":").any { it.equals(expectedComponent, ignoreCase = true) }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
