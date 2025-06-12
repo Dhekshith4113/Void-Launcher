@@ -9,6 +9,14 @@ object AppTimerManager {
         expiredFlags.remove(packageName)
     }
 
+    fun getTimers(): Map<String, Long> {
+        return appTimers
+    }
+
+    fun clearTimer(packageName: String) {
+        appTimers.remove(packageName)
+    }
+
     fun isExpired(packageName: String): Boolean {
         val endTime = appTimers[packageName] ?: return false
         return System.currentTimeMillis() > endTime
@@ -35,16 +43,5 @@ object AppTimerManager {
         appTimers.clear()
         expiredFlags.clear()
     }
-
-//    fun isTracking(packageName: String): Boolean {
-//        val endTime = appTimers[packageName] ?: return false
-//        return endTime > System.currentTimeMillis()
-//    }
-//
-//    fun getRemainingTime(packageName: String): Long {
-//        val endTime = appTimers[packageName] ?: return 0
-//        val now = System.currentTimeMillis()
-//        return (endTime - now).coerceAtLeast(0)
-//    }
 
 }

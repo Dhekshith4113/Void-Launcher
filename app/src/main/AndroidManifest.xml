@@ -61,8 +61,6 @@
             android:taskAffinity=""/>
 
         <activity android:name=".InAppTimerReminderActivity"/>
-        <activity android:name=".SubOptionsActivity"/>
-<!--        <activity android:name=".InternetStatsActivity" />-->
 
         <activity android:name=".TimerPromptActivity"
             android:theme="@style/CustomDialogTheme"
@@ -93,17 +91,6 @@
             android:name=".TimerMonitorService"
             android:foregroundServiceType="specialUse|mediaPlayback|dataSync"
             android:exported="false" />
-
-        <receiver android:name="com.example.voidui.MyDeviceAdminReceiver"
-            android:exported="true"
-            android:permission="android.permission.BIND_DEVICE_ADMIN">
-            <meta-data
-                android:name="android.app.device_admin"
-                android:resource="@xml/device_admin_receiver" />
-            <intent-filter>
-                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-            </intent-filter>
-        </receiver>
 
     </application>
 

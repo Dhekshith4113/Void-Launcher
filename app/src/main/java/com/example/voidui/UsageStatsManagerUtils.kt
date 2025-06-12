@@ -4,13 +4,9 @@ import android.app.AppOpsManager
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherApps
-import android.content.pm.PackageManager
 import android.os.UserHandle
 import android.os.UserManager
-import android.util.Log
 import java.util.Calendar
 
 object UsageStatsManagerUtils {
@@ -28,20 +24,7 @@ object UsageStatsManagerUtils {
     fun getTodayTopUsedApps(context: Context): Pair<Long, List<Pair<String, Long>>> {
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val packageManager = context.packageManager
-
-//        val installedApps = context.packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-//            .filter { context.packageManager.getLaunchIntentForPackage(it.packageName) != null }
-//            .map { it.packageName }
-//            .toSet()
-
-        val packageNameSet: Set<String> = filterApps(context).map { it.packageName }.toSet()
-
-        val excludedPackages = setOf(context.packageName) + packageNameSet
         val launchablePackages = getAllLaunchableAppPackages(context)
-//        val launchablePackages = context.packageManager.getInstalledApplications(0)
-//            .filter { context.packageManager.getLaunchIntentForPackage(it.packageName) != null && it.packageName !in excludedPackages }
-//            .map { it.packageName }
-//            .toSet()
 
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
@@ -97,28 +80,9 @@ object UsageStatsManagerUtils {
         }
 
         val filteredUsageMap = usageMap.filterKeys { it in launchablePackages }
-
-//        val filteredUsageMap = usageMap.filterKeys { it in installedApps }
         val totalTime = filteredUsageMap.values.sum()
-
-//        val top3 = filteredUsageMap.entries
-//            .sortedByDescending { it.value }
-//            .take(5)
-//            .map { (packageName, time) ->
-//                val appName = try {
-//                    packageManager.getApplicationLabel(
-//                        packageManager.getApplicationInfo(packageName, 0)
-//                    ).toString()
-//                } catch (e: Exception) {
-//                    packageName
-//                }
-//                appName to time
-//            }
-
         val sortedUsage = filteredUsageMap.entries
             .sortedByDescending { it.value }
-
-//        println(sortedUsage)
 
         val top3 = sortedUsage
             .take(3)
@@ -159,30 +123,6 @@ object UsageStatsManagerUtils {
             }
         }
         return packages
-    }
-
-    private fun isLauncherApp(context: Context, packageName: String): Boolean {
-        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-        val resolveInfo = context.packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
-        return resolveInfo?.activityInfo?.packageName == packageName
-    }
-
-//    private fun filterApps(context: Context): List<ApplicationInfo> {
-//        val launcherApps = mutableListOf<ApplicationInfo>()
-//        val allApps = context.packageManager.getInstalledApplications(0)
-//
-//        for (app in allApps) {
-//            when {
-//                isLauncherApp(context, app.packageName) -> launcherApps.add(app)
-//            }
-//        }
-//
-//        return launcherApps
-//    }
-
-    private fun filterApps(context: Context): List<ApplicationInfo> {
-        val allApps = context.packageManager.getInstalledApplications(0)
-        return allApps.filterNot { isLauncherApp(context, it.packageName) }
     }
 
 }

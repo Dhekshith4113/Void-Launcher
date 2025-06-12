@@ -21,8 +21,7 @@ class CenterSpacingDecoration : RecyclerView.ItemDecoration() {
         val parentWidth = parent.width
         val itemWidth = view.measuredWidth.takeIf { it > 0 } ?: view.layoutParams.width
 
-        // Safety check if still not measured
-        if (itemWidth <= 0 || parentWidth <= 0) return
+        if (itemWidth <= 0 || parentWidth <= 0) return  // Safety check if still not measured
 
         val totalWidth = itemWidth * itemCount
         val remainingSpace = parentWidth - totalWidth

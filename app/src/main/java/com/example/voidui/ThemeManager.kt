@@ -1,4 +1,3 @@
-// ThemeManager.kt
 package com.example.voidui
 
 import android.content.Context

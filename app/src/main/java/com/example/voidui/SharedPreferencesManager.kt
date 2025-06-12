@@ -5,7 +5,6 @@ import android.content.SharedPreferences
 
 object SharedPreferencesManager {
     private const val PREFS_NAME = "MinimaPrefs"
-    private const val KEY_GLOBAL_TOGGLE = "global_toggle"
     private const val KEY_APP_TOGGLE_PREFIX = "app_toggle_"
     private const val KEY_GLOBAL_TIMER_ENABLED = "global_timer_enabled"
     private const val KEY_SWITCH_TRACK_ENABLED = "switch_track_enabled"
@@ -19,25 +18,13 @@ object SharedPreferencesManager {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    fun setGlobalToggle(context: Context, isEnabled: Boolean) {
-        getPrefs(context).edit().putBoolean(KEY_GLOBAL_TOGGLE, isEnabled).apply()
-    }
-
-    fun isGlobalToggleEnabled(context: Context): Boolean {
-        return getPrefs(context).getBoolean(KEY_GLOBAL_TOGGLE, true)
-    }
-
-    fun setAppToggle(context: Context, packageName: String, isEnabled: Boolean) {
-        getPrefs(context).edit().putBoolean(KEY_APP_TOGGLE_PREFIX + packageName, isEnabled).apply()
-    }
-
     fun isAppToggleEnabled(context: Context, packageName: String): Boolean {
         return getPrefs(context).getBoolean(KEY_APP_TOGGLE_PREFIX + packageName, true)
     }
 
     // Global timer enabled getter
     fun isGlobalTimerEnabled(context: Context): Boolean {
-        return getPrefs(context).getBoolean(KEY_GLOBAL_TIMER_ENABLED, false) // default OFF
+        return getPrefs(context).getBoolean(KEY_GLOBAL_TIMER_ENABLED, false)
     }
 
     // Global timer enabled setter

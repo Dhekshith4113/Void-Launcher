@@ -10,9 +10,7 @@ import android.os.UserHandle
 import android.os.UserManager
 import android.provider.Settings
 import android.view.View
-import android.widget.CompoundButton
 import android.widget.ImageButton
-import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -46,6 +44,10 @@ class InAppTimerReminderActivity : AppCompatActivity() {
             overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right)
         }
 
+        if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
+            SharedPreferencesManager.setGlobalTimerEnabled(this, false)
+        }
+
         globalToggle.isChecked = SharedPreferencesManager.isGlobalTimerEnabled(this)
         updateAppListVisibility(globalToggle.isChecked)
 
@@ -53,11 +55,15 @@ class InAppTimerReminderActivity : AppCompatActivity() {
             if (AppAccessibilityService.isAccessibilityServiceEnabled()) {
                 SharedPreferencesManager.setGlobalTimerEnabled(this, true)
                 globalToggle.isChecked = true
+                val intentTimer = Intent(this, TimerMonitorService::class.java)
+                startForegroundService(intentTimer)
                 updateAppListVisibility(true)
             } else {
                 SharedPreferencesManager.setGlobalTimerEnabled(this, false)
                 globalToggle.isChecked = false
-                Toast.makeText(this, "Please grant accessibility permission to activate in-app timer", Toast.LENGTH_SHORT).show()
+                val intentTimer = Intent(this, TimerMonitorService::class.java)
+                stopService(intentTimer)
+                Toast.makeText(this, "Please grant permission to activate in-app timer", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -67,10 +73,14 @@ class InAppTimerReminderActivity : AppCompatActivity() {
                     accessibilityLauncher.launch(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 } else {
                     SharedPreferencesManager.setGlobalTimerEnabled(this, true)
+                    val intentTimer = Intent(this, TimerMonitorService::class.java)
+                    startForegroundService(intentTimer)
                     updateAppListVisibility(true)
                 }
             } else {
                 SharedPreferencesManager.setGlobalTimerEnabled(this, false)
+                val intentTimer = Intent(this, TimerMonitorService::class.java)
+                stopService(intentTimer)
                 updateAppListVisibility(false)
             }
         }

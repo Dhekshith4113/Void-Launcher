@@ -7,7 +7,6 @@
     android:background="@drawable/dialog_background"
     android:clipToOutline="true">
 
-
     <TextView
         android:id="@+id/dialogTitle"
         style="@style/AppBaseText"
@@ -21,51 +20,50 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-
-    <TextView
+    <Button
         android:id="@+id/btn1Min"
         style="@style/AppBaseText"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="18dp"
         android:layout_marginTop="18dp"
-        android:layout_weight="1"
-        android:clickable="true"
         android:gravity="center"
         android:text="1 min "
+        android:textAllCaps="false"
+        android:background="@android:color/transparent"
         app:layout_constraintEnd_toStartOf="@+id/btn2Min"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/dialogTitle" />
 
-    <TextView
+    <Button
         android:id="@+id/btn2Min"
         style="@style/AppBaseText"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="18dp"
         android:layout_marginEnd="18dp"
-        android:layout_weight="1"
-        android:clickable="true"
         android:gravity="center"
         android:text="2 min "
+        android:textAllCaps="false"
+        android:background="@android:color/transparent"
         app:layout_constraintBottom_toBottomOf="@+id/btn1Min"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/btn1Min"
         app:layout_constraintTop_toTopOf="@+id/btn1Min" />
 
-    <TextView
+    <Button
         android:id="@+id/btn5Min"
         style="@style/AppBaseText"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="18dp"
         android:layout_marginTop="18dp"
-        android:layout_weight="1"
-        android:clickable="true"
         android:gravity="center"
         android:text="5 min "
+        android:textAllCaps="false"
+        android:background="@android:color/transparent"
         app:layout_constraintBottom_toTopOf="@+id/customTimeInput"
         app:layout_constraintEnd_toStartOf="@+id/btn10Min"
         app:layout_constraintHorizontal_bias="0.5"
@@ -73,17 +71,17 @@
         app:layout_constraintTop_toBottomOf="@+id/btn1Min"
         app:layout_constraintVertical_bias="0.5" />
 
-    <TextView
+    <Button
         android:id="@+id/btn10Min"
         style="@style/AppBaseText"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="18dp"
         android:layout_marginEnd="18dp"
-        android:layout_weight="1"
-        android:clickable="true"
         android:gravity="center"
         android:text="10 min"
+        android:textAllCaps="false"
+        android:background="@android:color/transparent"
         app:layout_constraintBottom_toBottomOf="@+id/btn5Min"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
@@ -135,6 +133,7 @@
         android:layout_marginBottom="18dp"
         android:background="@drawable/button_outline_white"
         android:text="Close"
+        android:textAllCaps="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

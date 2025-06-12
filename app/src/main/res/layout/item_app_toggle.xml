@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="App Name"
-            style="?attr/textAppearanceBody1"
+            style="@style/AppBaseText"
             android:ellipsize="end"
             android:maxLines="1"
             android:layout_gravity="center"/>

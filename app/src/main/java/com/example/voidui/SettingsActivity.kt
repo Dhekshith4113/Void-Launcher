@@ -16,8 +16,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.SwitchCompat
@@ -68,9 +66,9 @@ class SettingsActivity : AppCompatActivity() {
 
         val appViews = listOf(
             findViewById<View>(R.id.appOneView),
-            findViewById<View>(R.id.appTwoView),
-            findViewById<View>(R.id.appThreeView),
-            findViewById<View>(R.id.appFourView)
+            findViewById(R.id.appTwoView),
+            findViewById(R.id.appThreeView),
+            findViewById(R.id.appFourView)
         )
 
         val colors = listOf(
@@ -153,15 +151,6 @@ class SettingsActivity : AppCompatActivity() {
                         appViews[i].visibility = View.GONE
                     }
                 }
-
-//                for (i in appTimeViews.indices) {
-//                    if (i < topApps.size) {
-//                        val (packageName, usageTime) = topApps[i]
-//                        appTimeViews[i].text = "${formatTime(usageTime)}"
-//                    } else {
-//                        appTimeViews[i].text = ""
-//                    }
-//                }
 
                 for (i in appIndicatorView.indices) {
                     val drawable = ContextCompat.getDrawable(this@SettingsActivity, R.drawable.app_indicator_background)?.mutate() as? GradientDrawable
@@ -386,6 +375,11 @@ class SettingsActivity : AppCompatActivity() {
         val settingsSwitch = dialogView.findViewById<SwitchCompat>(R.id.settingsSwitch)
         val doubleTapSwitch = dialogView.findViewById<SwitchCompat>(R.id.doubleTapSwitch)
 
+        if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
+            SharedPreferencesManager.setSwipeToLockEnabled(this, false)
+            SharedPreferencesManager.setDoubleTapToLockEnabled(this, false)
+        }
+
         lockSwitch.isChecked = SharedPreferencesManager.isSwipeToLockEnabled(this)
         settingsSwitch.isChecked = SharedPreferencesManager.isSwipeToSettingsEnabled(this)
         doubleTapSwitch.isChecked = SharedPreferencesManager.isDoubleTapToLockEnabled(this)
@@ -437,9 +431,9 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     inner class SwipeBackGestureListener : GestureDetector.SimpleOnGestureListener() {
-        private val SWIPE_THRESHOLD = 100
-        private val SWIPE_VELOCITY_THRESHOLD = 100
-        private val EDGE_SWIPE_THRESHOLD = 50
+        private val swipeThreshold = 100
+        private val swipeVelocityThreshold = 100
+        private val edgeSwipeThreshold = 50
 
         override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
             if (e1 == null) return false
@@ -448,10 +442,10 @@ class SettingsActivity : AppCompatActivity() {
             val diffY = e2.y - e1.y
 
             if (abs(diffX) > abs(diffY) &&
-                abs(diffX) > SWIPE_THRESHOLD &&
-                abs(velocityX) > SWIPE_VELOCITY_THRESHOLD
+                abs(diffX) > swipeThreshold &&
+                abs(velocityX) > swipeVelocityThreshold
             ) {
-                if (diffX > 0 && startX < EDGE_SWIPE_THRESHOLD) {
+                if (diffX > 0 && startX < edgeSwipeThreshold) {
                     finish()
                     overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right)
                     return true

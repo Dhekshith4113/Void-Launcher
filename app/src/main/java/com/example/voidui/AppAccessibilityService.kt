@@ -12,7 +12,6 @@ import androidx.annotation.RequiresApi
 class AppAccessibilityService : AccessibilityService() {
 
     companion object {
-//        var oneMinuteToastShown = false
         var instance: AppAccessibilityService? = null
             private set
 
@@ -55,24 +54,6 @@ class AppAccessibilityService : AccessibilityService() {
             if (!packageName.isNullOrEmpty()) {
                 lastForegroundApp = packageName
                 Log.d("AppAccessibilityService", "Foreground app: $packageName")
-
-                if (AppTimerManager.isExpired(packageName)) {
-//                    val prefs = getSharedPreferences("focus_prefs", MODE_PRIVATE)
-//                    val shouldSkip = prefs.getBoolean("skip_dialog_$packageName", false)
-
-//                    if (shouldSkip) {
-                        // First re-entry after force exit, skip showing dialog this time
-//                        prefs.edit().remove("skip_dialog_$packageName").apply()
-//                        Log.d("AppAccessibilityService", "Dialog skipped for $packageName")
-//                    } else {
-                        Log.d("AppAccessibilityService", "Showing dialog for $packageName")
-                        val intent = Intent(this, TimerPromptActivity::class.java).apply {
-                            putExtra("packageName", packageName)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        startActivity(intent)
-//                    }
-                }
             }
         }
     }
@@ -113,70 +94,3 @@ class AppAccessibilityService : AccessibilityService() {
         Log.d("AppAccessibilityService", "Service destroyed")
     }
 }
-
-//package com.example.voidui
-//
-//import android.accessibilityservice.AccessibilityService
-//import android.content.Intent
-//import android.os.Handler
-//import android.os.Looper
-//import android.view.accessibility.AccessibilityEvent
-//import android.widget.Toast
-//
-//class AppAccessibilityService : AccessibilityService() {
-//
-//    companion object {
-//        var targetPackage: String? = null
-//        var exitTimeMillis: Long = 0
-//        var oneMinuteToastShown = false
-//    }
-//
-//    private var currentPackage: String? = null
-//
-//    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-//        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-//            currentPackage = event.packageName?.toString()
-//        }
-//    }
-//
-//    override fun onServiceConnected() {
-//        super.onServiceConnected()
-//        monitorAppTimer()
-//    }
-//
-//    private fun monitorAppTimer() {
-//        Thread {
-//            while (true) {
-//                if (targetPackage != null &&
-//                    currentPackage == targetPackage
-//                ) {
-//                    val timeRemaining = exitTimeMillis - System.currentTimeMillis()
-//
-//                    if (timeRemaining <= 60_000 && !oneMinuteToastShown) {
-//                        oneMinuteToastShown = true
-//                        Handler(Looper.getMainLooper()).post {
-//                            Toast.makeText(
-//                                applicationContext,
-//                                "1 minute left",
-//                                Toast.LENGTH_LONG
-//                            ).show()
-//                        }
-//                    }
-//
-//                    if (System.currentTimeMillis() >= exitTimeMillis) {
-//                        val homeIntent = packageManager.getLaunchIntentForPackage(packageName)
-//                        homeIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-//                        startActivity(homeIntent)
-//
-//                        targetPackage = null
-//                        exitTimeMillis = 0
-//                        oneMinuteToastShown = false
-//                    }
-//                }
-//                Thread.sleep(1000)
-//            }
-//        }.start()
-//    }
-//
-//    override fun onInterrupt() {}
-//}

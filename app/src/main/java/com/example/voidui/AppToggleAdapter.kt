@@ -4,7 +4,6 @@ import android.content.pm.ApplicationInfo
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import androidx.recyclerview.widget.RecyclerView
@@ -45,6 +44,9 @@ class AppToggleAdapter(
         // Set new listener
         holder.appSwitch.setOnCheckedChangeListener { _, newState ->
             SharedPreferencesManager.setAppTimerEnabled(context, packageName, newState)
+            if (!newState) {
+                AppTimerManager.clearTimer(packageName)
+            }
             onToggleChanged() // Notify parent to refresh the list
         }
     }
@@ -53,4 +55,5 @@ class AppToggleAdapter(
         val appName: TextView = view.findViewById(R.id.appNameToggle)
         val appSwitch: SwitchCompat = view.findViewById(R.id.appSwitch)
     }
+
 }

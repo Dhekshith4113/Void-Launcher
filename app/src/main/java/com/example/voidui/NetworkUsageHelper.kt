@@ -94,7 +94,7 @@ class NetworkUsageHelper(private val context: Context) {
             )
 
             var totalBytes = 0L
-            val bucket = NetworkStats.Bucket() // ✅ properly initialized
+            val bucket = NetworkStats.Bucket()
 
             while (networkStats.hasNextBucket()) {
                 networkStats.getNextBucket(bucket)
@@ -124,7 +124,7 @@ class NetworkUsageHelper(private val context: Context) {
             )
 
             var totalBytes = 0L
-            val bucket = NetworkStats.Bucket() // ✅ properly initialized
+            val bucket = NetworkStats.Bucket()
 
             while (wifiStats.hasNextBucket()) {
                 wifiStats.getNextBucket(bucket)

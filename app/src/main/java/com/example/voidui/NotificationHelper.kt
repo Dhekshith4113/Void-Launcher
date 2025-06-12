@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -18,15 +19,28 @@ class NotificationHelper(private val context: Context) {
         const val CHANNEL_ID_NET_STAT = "speed_monitor_channel"
         const val CHANNEL_NAME_NET_STAT = "Internet Speed Monitor"
         const val NOTIFICATION_ID_NET_SAT = 101
+        const val CHANNEL_ID_APP_TIMER = "timer_channel"
+        const val CHANNEL_NAME_APP_TIMER = "Timer Monitor"
+        const val NOTIFICATION_ID_APP_TIMER = 1
     }
 
     init {
-        createNotificationChannel()
+        createNetSpeedNotificationChannel()
+        createAppTimerNotificationChannel()
     }
 
-    private fun createNotificationChannel() {
+    private fun createNetSpeedNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID_NET_STAT, CHANNEL_NAME_NET_STAT,
+            NotificationManager.IMPORTANCE_LOW
+        )
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
+    }
+
+    private fun createAppTimerNotificationChannel() {
+        val channel = NotificationChannel(
+            CHANNEL_ID_APP_TIMER, CHANNEL_NAME_APP_TIMER,
             NotificationManager.IMPORTANCE_LOW
         )
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -40,9 +54,7 @@ class NotificationHelper(private val context: Context) {
         val download = parseSpeed(downloadSpeed) // in KB/s
         val upload = parseSpeed(uploadSpeed)     // in KB/s
         val totalSpeed = download + upload
-        val speedText = totalSpeed.toFloat() // convert to KB/s
-
-        println(speedText)
+        val speedText = totalSpeed               // convert to KB/s
 
         val icon = createSpeedIcon(context, speedText)
 
@@ -50,9 +62,61 @@ class NotificationHelper(private val context: Context) {
             .setContentTitle(contentTitle)
             .setContentText(contentText)
             .setSmallIcon(icon)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            .build()
+    }
+
+    fun buildAppTimerNotification(appTimers: Map<String, Long>): Notification {
+        val contentTitle = appTimers.toList()
+            .filter { (_, endTime) -> (endTime - System.currentTimeMillis()).coerceAtLeast(0) > 0 }
+            .sortedBy { (_, value) -> value }
+            .joinToString("\n") { (appPackage, endTime) ->
+            val packageManager = context.packageManager
+            val appName = try {
+                val appInfo = packageManager.getApplicationInfo(appPackage, 0)
+                packageManager.getApplicationLabel(appInfo).toString()
+            } catch (e: PackageManager.NameNotFoundException) {
+                "Active"
+            }
+
+            val timeText = (endTime - System.currentTimeMillis()).coerceAtLeast(0)
+
+            "$appName ${formatMillis(timeText)}"
+        }
+
+        if (contentTitle.isBlank()) {
+            return NotificationCompat.Builder(context, CHANNEL_ID_NET_STAT)
+                .setContentTitle("In-app time reminder")
+                .setContentText("Active")
+                .setSmallIcon(R.drawable.timer_24px)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build()
+        }
+
+        val maxSeconds = contentTitle
+            .lines()
+            .mapNotNull { line ->
+                val time = line.substringAfterLast(" ")
+                val parts = time.split(":")
+                if (parts.size == 2) {
+                    val minutes = parts[0].toIntOrNull() ?: return@mapNotNull null
+                    val seconds = parts[1].toIntOrNull() ?: return@mapNotNull null
+                    minutes * 60 + seconds
+                } else null
+            }
+            .minOrNull() ?: 0
+
+        val icon = createTimerIcon(context, maxSeconds)
+
+        return NotificationCompat.Builder(context, CHANNEL_ID_NET_STAT)
+            .setContentTitle("In-app time reminder")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(contentTitle))
+            .setSmallIcon(icon)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .build()
@@ -63,56 +127,12 @@ class NotificationHelper(private val context: Context) {
         manager.notify(NOTIFICATION_ID_NET_SAT, notification)
     }
 
-//    fun createSpeedIcon(context: Context, speedText: Float): IconCompat {
-//
-//        // Convert speed to display string
-//        val (value, unit) = if (speedText >= 1024) {
-//            String.format("%.1f", speedText / 1024f) to "MB/s"
-//        } else {
-//            speedText.toInt().toString() to "KB/s"
-//        }
-//
-////        val size = context.resources.getDimensionPixelSize(android.R.dimen.notification_large_icon_height)
-////        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-////        val canvas = Canvas(bitmap)
-//
-//        val scale = context.resources.displayMetrics.density
-//        val sizePx = (24 * scale).toInt() // system icon size
-//        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-//        val canvas = Canvas(bitmap)
-//
-////        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-////            color = Color.WHITE
-////            textSize = size / 2.5f
-////            textAlign = Paint.Align.CENTER
-////            typeface = Typeface.DEFAULT_BOLD
-////        }
-//
-//        val paintValue = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-//            color = Color.WHITE
-//            textSize = 10f * scale
-//            textAlign = Paint.Align.CENTER
-//            typeface = Typeface.DEFAULT_BOLD
-//        }
-//
-//        val paintUnit = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-//            color = Color.LTGRAY
-//            textSize = 7f * scale
-//            textAlign = Paint.Align.CENTER
-//        }
-//
-//        // Draw the speed number (top)
-//        canvas.drawText(value, sizePx / 2f, sizePx / 2.5f, paintValue)
-//        // Draw the unit (bottom)
-//        canvas.drawText(unit, sizePx / 2f, sizePx.toFloat() - 4f, paintUnit)
-//
-//        // Draw the speed text (e.g., "2")
-////        canvas.drawText(speedText, size / 2f, size / 2f + paint.textSize / 3, paint)
-//
-//        return IconCompat.createWithBitmap(bitmap)
-//    }
+    fun updateAppTimerNotification(notification: Notification) {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(NOTIFICATION_ID_APP_TIMER, notification)
+    }
 
-    fun createSpeedIcon(context: Context, speedInKbps: Float): IconCompat {
+    private fun createSpeedIcon(context: Context, speedInKbps: Float): IconCompat {
         // Convert speed to display string
         val (value, unit) = if (speedInKbps >= 1024) {
             String.format("%.1f", speedInKbps / 1024f) to "MB/s"
@@ -149,12 +169,59 @@ class NotificationHelper(private val context: Context) {
         return IconCompat.createWithBitmap(bitmap)
     }
 
-    fun parseSpeed(speed: String): Float {
+    private fun createTimerIcon(context: Context, seconds: Int): IconCompat {
+        // Convert speed to display string
+        val unit: String
+        val timeLeft: String
+
+        if (seconds >= 60){
+            timeLeft = ((seconds / 60) + 1).toString()
+            unit = "MIN"
+        } else {
+            timeLeft = seconds.toString()
+            unit = "SEC"
+        }
+        // Create a bitmap for the icon (must be 24x24dp for status bar)
+        val scale = context.resources.displayMetrics.density
+        val sizePx = (24 * scale).toInt() // system icon size
+        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+
+        val paintValue = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 18f * scale
+            textScaleX = 0.3f *scale
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        val paintUnit = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 10f * scale
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        // Draw the speed number (top)
+        canvas.drawText(timeLeft, sizePx / 2f, sizePx / 1.8f, paintValue)
+        // Draw the unit (bottom)
+        canvas.drawText(unit, sizePx / 2f, sizePx.toFloat() - 0.6f, paintUnit)
+
+        return IconCompat.createWithBitmap(bitmap)
+    }
+
+    private fun parseSpeed(speed: String): Float {
         return when {
             speed.contains("MB/s") -> speed.replace("MB/s", "").trim().toFloatOrNull()?.times(1024) ?: 0f
             speed.contains("KB/s") -> speed.replace("KB/s", "").trim().toFloatOrNull() ?: 0f
             else -> 0f
         }
+    }
+
+    private fun formatMillis(millis: Long): String {
+        val minutes = (millis / 1000) / 60
+        val seconds = (millis / 1000) % 60
+        return String.format("%02d:%02d", minutes, seconds)
     }
 
 }

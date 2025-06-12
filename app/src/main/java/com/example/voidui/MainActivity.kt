@@ -3,7 +3,6 @@ package com.example.voidui
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
@@ -32,12 +31,7 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.DragStartHelper
-import androidx.recyclerview.widget.DefaultItemAnimator
-import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlin.math.abs
@@ -50,7 +44,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var drawerAdapter: AppDrawerAdapter
     private lateinit var drawerRecyclerView: RecyclerView
 
-    private val requestCodePostNotifications = 1001
     private var needRefresh = false
     private var toastShownThisDrag = false
     private var shouldMoveIndicator = true
@@ -63,10 +56,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        if (!UsageStatsManagerUtils.hasUsageStatsPermission(this)) {
-            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-        }
-
         val prefsInstalledApps = getSharedPreferences("installed_apps", MODE_PRIVATE)
         val firstTime = prefsInstalledApps.getBoolean("first_time", false)
 
@@ -75,35 +64,34 @@ class MainActivity : AppCompatActivity() {
             prefsInstalledApps.edit().putBoolean("first_time", true).apply()
         }
 
-        val prefs = getSharedPreferences("minima_prefs", MODE_PRIVATE)
-        val askedForNotifications = prefs.getBoolean("asked_notifications", false)
+        if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
+            promptAccessibilitySettings()
+        }
 
-        recyclerView = findViewById(R.id.recyclerView)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        gestureDetector = GestureDetector(this, SwipeGestureListener())
+        if (!UsageStatsManagerUtils.hasUsageStatsPermission(this)) {
+            promptOverlaySettings()
+        }
 
-        if (!askedForNotifications) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                    != PackageManager.PERMISSION_GRANTED
-                ) {
-                    ActivityCompat.requestPermissions(
-                        this,
-                        arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                        requestCodePostNotifications
-                    )
-                } else {
-                    checkAndPromptNotificationSettings(prefs)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this, Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED) {
+                if (SharedPreferencesManager.isSwitchTrackEnabled(this)) {
+                    val intent = Intent(this, SpeedMonitorService::class.java)
+                    startForegroundService(intent)
                 }
             } else {
-                checkAndPromptNotificationSettings(prefs)
+                promptNotificationSettings()
+                SharedPreferencesManager.setSwitchTrackEnabled(this, false)
+                val intent = Intent(this, SpeedMonitorService::class.java)
+                stopService(intent)
             }
         }
 
-        if (SharedPreferencesManager.isSwitchTrackEnabled(this)) {
-            val intent = Intent(this, SpeedMonitorService::class.java)
-            startForegroundService(intent)
-        }
+        gestureDetector = GestureDetector(this, SwipeGestureListener())
+
+        recyclerView = findViewById(R.id.recyclerView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
 
         listAdapter = AppListAdapter(this, loadListApps().toMutableList(), packageManager, refreshList = {
             needRefresh =true
@@ -125,7 +113,6 @@ class MainActivity : AppCompatActivity() {
                 // Clone list to preserve order
                 val updatedList = currentApps.toMutableList()
                 updatedList.removeAt(index)
-//                updatedList.add(index, AppDrawerAdapter.getDropIndicatorItem())
                 listAdapter.updateData(updatedList)
             }
         }
@@ -169,38 +156,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-//        val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
-//            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT, 0
-//        ) {
-//            override fun onMove(
-//                recyclerView: RecyclerView,
-//                viewHolder: RecyclerView.ViewHolder,
-//                target: RecyclerView.ViewHolder
-//            ): Boolean {
-//                val fromPos = viewHolder.adapterPosition
-//                val toPos = target.adapterPosition
-//                drawerAdapter.swapItems(fromPos, toPos)
-//                return true
-//            }
-//
-//            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-//                // No swipe action
-//            }
-//
-//            override fun isLongPressDragEnabled(): Boolean {
-//                return true
-//            }
-//        }
-
-//        val itemTouchHelper = ItemTouchHelper(itemTouchHelperCallback)
-//        itemTouchHelper.attachToRecyclerView(drawerRecyclerView)
-
         drawerRecyclerView.setOnDragListener { view, event ->
             when (event.action) {
 
                 DragEvent.ACTION_DRAG_ENTERED -> {
-//                    view.setBackgroundColor(getColor(R.color.divider_grey))
-
                     // Only insert if not already inserted
                     if (!drawerAdapter.getApps().any { it.packageName == AppDrawerAdapter.DROP_INDICATOR_PACKAGE }) {
                         drawerAdapter.insertDropIndicator(0)
@@ -211,7 +170,6 @@ class MainActivity : AppCompatActivity() {
                 DragEvent.ACTION_DRAG_LOCATION -> {
                     val x = event.x.toInt()
                     val recyclerView = view as RecyclerView
-
                     val draggedApp = event.localState as ApplicationInfo
                     val isAppFromDrawer = !listAdapter.getApps().contains(draggedApp)
                     if (!isAppFromDrawer && (drawerAdapter.getApps().size >= drawerSize+1)) {
@@ -225,7 +183,6 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     var targetPos = -1
-
                     // Find the hovered child
                     for (i in 0 until recyclerView.childCount) {
                         val child = recyclerView.getChildAt(i)
@@ -243,18 +200,15 @@ class MainActivity : AppCompatActivity() {
                         val currentDropIndex = drawerAdapter.getApps().indexOfFirst {
                             it.packageName == AppDrawerAdapter.DROP_INDICATOR_PACKAGE
                         }
-
                         if (currentDropIndex != targetPos && shouldMoveIndicator) {
                             drawerAdapter.moveDropIndicator(targetPos)
                         }
                     }
-
                     true
                 }
 
                 DragEvent.ACTION_DROP -> {
                     val draggedApp = event.localState as ApplicationInfo
-
                     val dropIndex = drawerAdapter.getApps().indexOfFirst {
                         it.packageName == AppDrawerAdapter.DROP_INDICATOR_PACKAGE
                     }.takeIf { it != -1 } ?: drawerAdapter.itemCount
@@ -290,7 +244,6 @@ class MainActivity : AppCompatActivity() {
 
                 DragEvent.ACTION_DRAG_EXITED, DragEvent.ACTION_DRAG_ENDED -> {
                     drawerAdapter.removeDropIndicator()
-//                    view.setBackgroundColor(Color.TRANSPARENT)
                     toastShownThisDrag = false
                     shouldMoveIndicator = true
                     true
@@ -317,6 +270,7 @@ class MainActivity : AppCompatActivity() {
                     listAdapter.addApp(app)
                     true
                 }
+
                 else -> true
             }
         }
@@ -326,7 +280,7 @@ class MainActivity : AppCompatActivity() {
                 val child = drawerRecyclerView.findChildViewUnder(e.x, e.y)
                 return if (child == null) {
                     if (SharedPreferencesManager.isDoubleTapToLockEnabled(this@MainActivity)) {
-                        vibratePhone()
+                        vibratePhone(100)
                         AppAccessibilityService.lockNowWithAccessibility()
                     } else {
                         Toast.makeText(this@MainActivity, "Please enable 'Double tap on the mini app drawer to Lock' in Gestures", Toast.LENGTH_SHORT).show()
@@ -347,10 +301,6 @@ class MainActivity : AppCompatActivity() {
         settingsButton.setOnClickListener {
             openSettings()
             overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
-        }
-
-        if (UsageStatsManagerUtils.hasUsageStatsPermission(this)) {
-            startService(Intent(this, TimerMonitorService::class.java))
         }
 
     }
@@ -451,34 +401,67 @@ class MainActivity : AppCompatActivity() {
         editor.apply()
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == requestCodePostNotifications) {
-            val prefs = getSharedPreferences("minima_prefs", MODE_PRIVATE)
-            checkAndPromptNotificationSettings(prefs)
+    private fun promptNotificationSettings() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_notification_prompt, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialogView.findViewById<TextView>(R.id.btnOpen).setOnClickListener {
+            val intent = Intent().apply {
+                action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+            }
+            startActivity(intent)
+            dialog.dismiss()
         }
+        dialogView.findViewById<TextView>(R.id.btnLater).setOnClickListener {
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
-    private fun checkAndPromptNotificationSettings(prefs: SharedPreferences) {
-        if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-            AlertDialog.Builder(this)
-                .setTitle("Enable Notifications")
-                .setMessage("Void needs notification access to show important messages. Please enable notifications.")
-                .setPositiveButton("Open Settings") { _, _ ->
-                    val intent = Intent().apply {
-                        action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
-                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                    }
-                    startActivity(intent)
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
+    private fun promptOverlaySettings() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_usage_prompt, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialogView.findViewById<TextView>(R.id.btnOpen).setOnClickListener {
+            val intent = Intent().apply {
+                action = Settings.ACTION_USAGE_ACCESS_SETTINGS
+                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+            }
+            startActivity(intent)
+            dialog.dismiss()
         }
-        prefs.edit().putBoolean("asked_notifications", true).apply()
+        dialogView.findViewById<TextView>(R.id.btnLater).setOnClickListener {
+            dialog.dismiss()
+        }
+        dialog.show()
+    }
+
+    private fun promptAccessibilitySettings() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_accessibility_prompt, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialogView.findViewById<TextView>(R.id.btnOpen).setOnClickListener {
+            val intent = Intent().apply {
+                action = Settings.ACTION_ACCESSIBILITY_SETTINGS
+                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+            }
+            startActivity(intent)
+            dialog.dismiss()
+        }
+        dialogView.findViewById<TextView>(R.id.btnLater).setOnClickListener {
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     private fun shouldShowTimer(context: Context, packageName: String): Boolean {
@@ -515,7 +498,6 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     Toast.makeText(this, "Cannot launch app", Toast.LENGTH_SHORT).show()
                 }
-
                 dialog.dismiss()
             }
         }
@@ -566,7 +548,6 @@ class MainActivity : AppCompatActivity() {
     private fun loadDrawerApps(): List<ApplicationInfo> {
         val prefs = getSharedPreferences("drawer_prefs", MODE_PRIVATE)
         val packageList = prefs.getString("drawer_ordered_packages", "")?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
-
         val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
         val userManager = getSystemService(Context.USER_SERVICE) as UserManager
         val users = userManager.userProfiles
@@ -578,12 +559,10 @@ class MainActivity : AppCompatActivity() {
                 allAppsMap[activity.applicationInfo.packageName] = activity.applicationInfo
             }
         }
-
         val drawerApps = mutableListOf<ApplicationInfo>()
         for (pkg in packageList) {
             allAppsMap[pkg]?.let { drawerApps.add(it) }
         }
-
         return drawerApps
     }
 
@@ -610,13 +589,11 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-
             return listApps.filter {
                 packageManager.getLaunchIntentForPackage(it.packageName) != null &&
                         it.packageName != currentPackage // exclude "Void" itself
             }
                 .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
-
         } else {
             for (user in users) {
                 val activities = launcherApps.getActivityList(null, user as UserHandle)
@@ -627,12 +604,11 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-
             return listApps.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
         }
     }
 
-    private fun vibratePhone() {
+    private fun vibratePhone(millis: Long) {
         val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager.defaultVibrator
@@ -640,7 +616,7 @@ class MainActivity : AppCompatActivity() {
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
 
-        vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
+        vibrator.vibrate(VibrationEffect.createOneShot(millis, VibrationEffect.DEFAULT_AMPLITUDE))
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -653,9 +629,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     inner class SwipeGestureListener : GestureDetector.SimpleOnGestureListener() {
-        private val SWIPE_THRESHOLD = 100
-        private val SWIPE_VELOCITY_THRESHOLD = 100
-        private val EDGE_SWIPE_THRESHOLD = 50  // px from edge to detect swipe
+        private val swipeThreshold = 100
+        private val swipeVelocityThreshold = 100
+        private val edgeSwipeThreshold = 50  // px from edge to detect swipe
 
         @RequiresApi(Build.VERSION_CODES.P)
         override fun onFling(
@@ -666,35 +642,33 @@ class MainActivity : AppCompatActivity() {
         ): Boolean {
             if (e1 == null) return false
 
-            val startX = e1.x
-            val endX = e2.x
             val diffX = e2.x - e1.x
             val diffY = e2.y - e1.y
 
-            // Swipe must start within left EDGE_SWIPE_THRESHOLD
+            // Swipe must start within left edgeSwipeThreshold
             val screenWidth = resources.displayMetrics.widthPixels
 
             if (abs(diffX) > abs(diffY) &&
-                abs(diffX) > SWIPE_THRESHOLD &&
-                abs(velocityX) > SWIPE_VELOCITY_THRESHOLD
+                abs(diffX) > swipeThreshold &&
+                abs(velocityX) > swipeVelocityThreshold
             ) {
-                if (diffX < 0 && startX > screenWidth - EDGE_SWIPE_THRESHOLD) {
+                if (diffX < 0 && e1.x > screenWidth - edgeSwipeThreshold) {
                     // Swiped left (right → left)
                     if (SharedPreferencesManager.isSwipeToSettingsEnabled(this@MainActivity)) {
                         openSettings()
                     } else {
-                        Toast.makeText(this@MainActivity, "Please enable 'Swipe left to open settings' in Gestures", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, "Enable 'Swipe left to open settings' in Gestures", Toast.LENGTH_SHORT).show()
                     }
                     return true
                 }
 
-                if (diffX > 0 && startX < EDGE_SWIPE_THRESHOLD) {
+                if (diffX > 0 && e1.x < edgeSwipeThreshold) {
                     // Swipe right → Lock screen
                     if (SharedPreferencesManager.isSwipeToLockEnabled(this@MainActivity)) {
-                        vibratePhone()
+                        vibratePhone(100)
                         AppAccessibilityService.lockNowWithAccessibility()
                     } else {
-                        Toast.makeText(this@MainActivity, "Please enable 'Swipe right to Lock' in Gestures", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, "Enable 'Swipe right to Lock' in Gestures", Toast.LENGTH_SHORT).show()
                     }
                     return true
                 }

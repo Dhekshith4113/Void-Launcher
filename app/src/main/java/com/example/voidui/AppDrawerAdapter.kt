@@ -18,13 +18,9 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.AccelerateInterpolator
-import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
-import java.util.Collections
 
 class AppDrawerAdapter(
     private val context: Context,
@@ -51,20 +47,6 @@ class AppDrawerAdapter(
     @SuppressLint("ClickableViewAccessibility")
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val icon: ImageView = view.findViewById(R.id.appIcon)
-
-        fun scaleFadeIn() {
-            itemView.animate().cancel()
-            itemView.scaleX = 0.8f
-            itemView.scaleY = 0.8f
-            itemView.alpha = 0f
-            itemView.animate()
-                .scaleX(1f)
-                .scaleY(1f)
-                .alpha(1f)
-                .setDuration(200)
-                .setInterpolator(DecelerateInterpolator())
-                .start()
-        }
 
         private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
@@ -114,7 +96,6 @@ class AppDrawerAdapter(
             holder.icon.setImageResource(0)
             holder.icon.setBackgroundResource(R.drawable.drop_indicator)
             holder.itemView.setOnLongClickListener(null)
-            holder.scaleFadeIn() // Add fade-in effect
         } else {
             holder.icon.setBackgroundResource(0)
             holder.icon.setImageDrawable(app.loadIcon(pm))
@@ -141,7 +122,6 @@ class AppDrawerAdapter(
         if (dropIndex == toPosition) return // already at right spot
 
         if (dropIndex != -1) {
-//            animateMove(dropIndex, toPosition)
             appList.removeAt(dropIndex)
             notifyItemRemoved(dropIndex)
         }
@@ -150,14 +130,6 @@ class AppDrawerAdapter(
         appList.add(safePosition, getDropIndicatorItem())
         notifyItemInserted(safePosition)
     }
-
-//    fun removeDropIndicator() {
-//        val index = appList.indexOfFirst { it.packageName == DROP_INDICATOR_PACKAGE }
-//        if (index != -1) {
-//            appList.removeAt(index)
-//            notifyItemRemoved(index)
-//        }
-//    }
 
     fun removeDropIndicator() {
         val index = appList.indexOfFirst { it.packageName == DROP_INDICATOR_PACKAGE }
@@ -191,7 +163,7 @@ class AppDrawerAdapter(
 
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialogView.findViewById<TextView>(R.id.uninstallBtn).setOnClickListener {
-            val packageUri = Uri.parse("package:${appInfo.packageName}") // Replace with target package
+            val packageUri = Uri.parse("package:${appInfo.packageName}")
             val intent = Intent(Intent.ACTION_DELETE, packageUri)
             context.startActivity(intent)
             refreshList()
@@ -220,25 +192,11 @@ class AppDrawerAdapter(
         onSave(appList)
     }
 
-    fun addApp(app: ApplicationInfo) {
-        if ((appList.none { it.packageName == app.packageName }) && appList.size < drawerAppSize) {
-            appList.add(app)
-            appList.sortBy { it.loadLabel(pm).toString().lowercase() }
-            notifyDataSetChanged()
-        }
-    }
-
     fun removeApp(app: ApplicationInfo) {
         appList.removeAll { it.packageName == app.packageName }
         notifyDataSetChanged()
     }
 
     fun getApps(): List<ApplicationInfo> = appList
-
-    fun swapItems(from: Int, to: Int) {
-        Collections.swap(appList, from, to)
-        notifyItemMoved(from, to)
-        onSave(appList)  // Call the passed-in save method
-    }
 
 }

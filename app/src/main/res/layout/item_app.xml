@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/appItemLayout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -18,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="App Name"
-            style="?attr/textAppearanceBody1"
+            style="@style/AppBaseText"
             android:layout_weight="1"
             android:maxLines="1"
             android:ellipsize="end"
@@ -29,7 +30,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="new"
-            style="?attr/textAppearanceBody1"
+            style="@style/AppBaseText"
             android:layout_marginBottom="10dp"
             android:textColor="@color/new_app_indicator"/>
 

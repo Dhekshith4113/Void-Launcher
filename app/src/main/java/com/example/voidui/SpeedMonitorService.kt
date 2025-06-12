@@ -38,8 +38,7 @@ class SpeedMonitorService : Service() {
                 val wifiDataUsageFormatted = formatData(wifiDataBytes)
 
                 val wifiRssi = getWifiSignalStrength(applicationContext)
-//                val wifiText = wifiRssi?.let { "Signal $it dBm" } ?: ""
-                val wifiText = wifiRssi?.let { "Signal ${rssiToPercentage(it)}%" } ?: ""
+                val wifiText = wifiRssi?.let { "Signal $it dBm" } ?: ""
                 Log.d("SpeedMonitorService", "Signal Strength: $wifiText")
 
                 val updatedNotification = notificationHelper.buildNetStatNotification(downStr, upStr, mobileDataUsageFormatted, wifiDataUsageFormatted, wifiText)
@@ -116,4 +115,3 @@ class SpeedMonitorService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 }
-

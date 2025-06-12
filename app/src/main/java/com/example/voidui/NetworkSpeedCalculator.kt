@@ -26,4 +26,3 @@ class NetworkSpeedCalculator {
         return downloadSpeed to uploadSpeed
     }
 }
-
