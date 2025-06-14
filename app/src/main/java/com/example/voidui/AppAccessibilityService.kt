@@ -3,6 +3,7 @@ package com.example.voidui
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
@@ -52,8 +53,14 @@ class AppAccessibilityService : AccessibilityService() {
         if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val packageName = event.packageName?.toString()
             if (!packageName.isNullOrEmpty()) {
-                lastForegroundApp = packageName
-                Log.d("AppAccessibilityService", "Foreground app: $packageName")
+                val appName = try {
+                    val appInfo = packageManager.getApplicationInfo(packageName, 0)
+                    packageManager.getApplicationLabel(appInfo).toString()
+                } catch (e: PackageManager.NameNotFoundException) {
+                    "Unknown"
+                }
+                lastForegroundApp = appName
+                Log.d("AppAccessibilityService", "Foreground app: $appName")
             }
         }
     }

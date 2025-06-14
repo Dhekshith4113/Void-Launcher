@@ -1,7 +1,6 @@
 package com.example.voidui
 
 import android.app.Activity
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
@@ -25,16 +24,9 @@ class TimerPromptActivity : Activity() {
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
 
-        val packageName = intent.getStringExtra("packageName") ?: return
-        val packageManager = applicationContext.packageManager
-        val appName = try {
-            val appInfo = packageManager.getApplicationInfo(packageName, 0)
-            packageManager.getApplicationLabel(appInfo).toString()
-        } catch (e: PackageManager.NameNotFoundException) {
-            "Unknown App"
-        }
+        val appName = intent.getStringExtra("appName") ?: return
 
-        Log.d("TimerPromptActivity", "packageName is $packageName")
+        Log.d("TimerPromptActivity", "App name is $appName")
 
         val dialogTitle = findViewById<TextView>(R.id.dialogTitle)
         val customTimeInput = findViewById<EditText>(R.id.customTimeInput)
@@ -46,9 +38,9 @@ class TimerPromptActivity : Activity() {
 
         fun startTimerAndLaunchApp(minutes: Int) {
             if (minutes > 0) {
-                Log.d("TimerPromptActivity", "packageName is $packageName")
+                Log.d("TimerPromptActivity", "App name is $appName")
                 AppTimerManager.setTimer(packageName, minutes * 60 * 1000L)
-                SharedPreferencesManager.setOneMinToastShown(this, packageName, false)
+                SharedPreferencesManager.setOneMinToastShown(this, appName, false)
                 Toast.makeText(this, "Timer reset to $minutes min", Toast.LENGTH_SHORT).show()
                 finish()
             }

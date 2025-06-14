@@ -56,8 +56,10 @@ class MainActivity : AppCompatActivity() {
     private var needRefresh = false
     private var toastShownThisDrag = false
     private var shouldMoveIndicator = true
+
     private var lastAnimationUpdateTime = 0L
     private val animationThrottleMs = 16L // ~60 FPS
+
     val drawerSize = 4
 
     private val bubbleBackground by lazy {
@@ -104,7 +106,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        layoutMainActivity = findViewById<FrameLayout>(R.id.layoutMainActivity)
+        layoutMainActivity = findViewById(R.id.layoutMainActivity)
 
         gestureDetector = GestureDetector(this, SwipeGestureListener())
 
@@ -115,6 +117,7 @@ class MainActivity : AppCompatActivity() {
             needRefresh =true
         }) { appInfo ->
             val packageName = appInfo.packageName
+            Log.d("MainActivity", "App name is $packageName")
             if (shouldShowTimer(this, packageName)) {
                 showTimeLimitDialog(appInfo)
             } else {
@@ -851,17 +854,19 @@ class MainActivity : AppCompatActivity() {
             .setView(dialogView)
             .setCancelable(true)
             .create()
+        val appName = appInfo.loadLabel(applicationContext.packageManager).toString()
 
         fun startTimerAndLaunchApp(minutes: Int) {
             if (minutes > 0) {
-                Log.d("MainActivity", "packageName is ${appInfo.packageName}")
-                AppTimerManager.setTimer(appInfo.packageName, minutes * 60 * 1000L)
+
+                Log.d("MainActivity", "Set timer for $appName")
+                AppTimerManager.setTimer(appName, minutes * 60 * 1000L)
 
                 val intent = packageManager.getLaunchIntentForPackage(appInfo.packageName)
                 if (intent != null) {
                     startActivity(intent)
                     Toast.makeText(this, "Timer set to $minutes min", Toast.LENGTH_SHORT).show()
-                    SharedPreferencesManager.setOneMinToastShown(this, appInfo.packageName, false)
+                    SharedPreferencesManager.setOneMinToastShown(this, appName, false)
                 } else {
                     Toast.makeText(this, "Cannot launch app", Toast.LENGTH_SHORT).show()
                 }
@@ -870,7 +875,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialogView.findViewById<TextView>(R.id.dialogTitle).text = "How much time would you like\nto spend on ${appInfo.loadLabel(applicationContext.packageManager)}?"
+        dialogView.findViewById<TextView>(R.id.dialogTitle).text = "How much time would you like\nto spend on $appName?"
         dialogView.findViewById<TextView>(R.id.btn1Min).setOnClickListener {
             startTimerAndLaunchApp(1)
         }

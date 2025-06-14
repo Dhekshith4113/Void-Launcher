@@ -6,9 +6,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
-import android.view.View
 import android.widget.Toast
-import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -42,7 +40,7 @@ class TimerMonitorService : Service() {
                     } else {
                         Log.d("TimeMonitor", "Showing dialog for $currentApp")
                         val intent = Intent(this@TimerMonitorService, TimerPromptActivity::class.java).apply {
-                            putExtra("packageName", currentApp)
+                            putExtra("appName", currentApp)
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
                         startActivity(intent)

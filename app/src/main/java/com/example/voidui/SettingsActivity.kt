@@ -218,14 +218,18 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun formatTime(millis: Long): String {
-        val minutes = millis / 1000 / 60
-        val hours = minutes / 60
+        val seconds = millis / 1000
+        val secs = seconds % 60
+        val minutes = seconds / 60
         val mins = minutes % 60
+        val hours = minutes / 60
         return when {
             hours >= 10 -> "${hours}h ${mins}m"
             hours >= 1 -> " ${hours}h ${mins}m"
             mins >= 10 -> "${mins}m"
-            else -> " ${mins}m"
+            mins >= 1 -> " ${mins}m"
+            secs >= 10 -> "${secs}s"
+            else -> " ${secs}s"
         }
     }
 

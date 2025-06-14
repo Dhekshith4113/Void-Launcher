@@ -4,7 +4,6 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -74,17 +73,8 @@ class NotificationHelper(private val context: Context) {
         val contentTitle = appTimers.toList()
             .filter { (_, endTime) -> (endTime - System.currentTimeMillis()).coerceAtLeast(0) > 0 }
             .sortedBy { (_, value) -> value }
-            .joinToString("\n") { (appPackage, endTime) ->
-            val packageManager = context.packageManager
-            val appName = try {
-                val appInfo = packageManager.getApplicationInfo(appPackage, 0)
-                packageManager.getApplicationLabel(appInfo).toString()
-            } catch (e: PackageManager.NameNotFoundException) {
-                "Active"
-            }
-
+            .joinToString("\n") { (appName, endTime) ->
             val timeText = (endTime - System.currentTimeMillis()).coerceAtLeast(0)
-
             "$appName ${formatMillis(timeText)}"
         }
 
@@ -96,6 +86,8 @@ class NotificationHelper(private val context: Context) {
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build()
         }
+
+        val topApp = contentTitle.lines().first()
 
         val maxSeconds = contentTitle
             .lines()
@@ -114,6 +106,7 @@ class NotificationHelper(private val context: Context) {
 
         return NotificationCompat.Builder(context, CHANNEL_ID_NET_STAT)
             .setContentTitle("In-app time reminder")
+            .setContentText(topApp)
             .setStyle(NotificationCompat.BigTextStyle().bigText(contentTitle))
             .setSmallIcon(icon)
             .setPriority(NotificationCompat.PRIORITY_LOW)

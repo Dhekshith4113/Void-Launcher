@@ -18,8 +18,8 @@ object SharedPreferencesManager {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    fun isAppToggleEnabled(context: Context, packageName: String): Boolean {
-        return getPrefs(context).getBoolean(KEY_APP_TOGGLE_PREFIX + packageName, true)
+    fun isAppToggleEnabled(context: Context, appName: String): Boolean {
+        return getPrefs(context).getBoolean(KEY_APP_TOGGLE_PREFIX + appName, true)
     }
 
     // Global timer enabled getter
@@ -41,13 +41,13 @@ object SharedPreferencesManager {
     }
 
     // Per app timer enabled getter
-    fun isAppTimerEnabled(context: Context, packageName: String): Boolean {
-        return getPrefs(context).getBoolean(KEY_APP_TIMER_PREFIX + packageName, false)
+    fun isAppTimerEnabled(context: Context, appName: String): Boolean {
+        return getPrefs(context).getBoolean(KEY_APP_TIMER_PREFIX + appName, false)
     }
 
     // Per app timer enabled setter
-    fun setAppTimerEnabled(context: Context, packageName: String, enabled: Boolean) {
-        getPrefs(context).edit().putBoolean(KEY_APP_TIMER_PREFIX + packageName, enabled).apply()
+    fun setAppTimerEnabled(context: Context, appName: String, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_APP_TIMER_PREFIX + appName, enabled).apply()
     }
 
     fun isSwipeToLockEnabled(context: Context): Boolean {
@@ -74,11 +74,11 @@ object SharedPreferencesManager {
         getPrefs(context).edit().putBoolean(KEY_DOUBLE_TAP_TO_LOCK_ENABLED, enabled).apply()
     }
 
-    fun isOneMinToastShown(context: Context, packageName: String): Boolean {
-        return getPrefs(context).getBoolean(KEY_IS_ONE_MIN_TOAST_SHOWN + packageName, false)
+    fun isOneMinToastShown(context: Context, appName: String): Boolean {
+        return getPrefs(context).getBoolean(KEY_IS_ONE_MIN_TOAST_SHOWN + appName, false)
     }
 
-    fun setOneMinToastShown(context: Context, packageName: String, enabled: Boolean) {
-        getPrefs(context).edit().putBoolean(KEY_IS_ONE_MIN_TOAST_SHOWN + packageName, enabled).apply()
+    fun setOneMinToastShown(context: Context, appName: String, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_IS_ONE_MIN_TOAST_SHOWN + appName, enabled).apply()
     }
 }

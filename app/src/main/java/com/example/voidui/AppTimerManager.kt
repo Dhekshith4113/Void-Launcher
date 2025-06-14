@@ -4,39 +4,39 @@ object AppTimerManager {
     private val appTimers = mutableMapOf<String, Long>()
     private val expiredFlags = mutableSetOf<String>()
 
-    fun setTimer(packageName: String, endTimeMillisFromNow: Long) {
-        appTimers[packageName] = System.currentTimeMillis() + endTimeMillisFromNow
-        expiredFlags.remove(packageName)
+    fun setTimer(appName: String, endTimeMillisFromNow: Long) {
+        appTimers[appName] = System.currentTimeMillis() + endTimeMillisFromNow
+        expiredFlags.remove(appName)
     }
 
     fun getTimers(): Map<String, Long> {
         return appTimers
     }
 
-    fun clearTimer(packageName: String) {
-        appTimers.remove(packageName)
+    fun clearTimer(appName: String) {
+        appTimers.remove(appName)
     }
 
-    fun isExpired(packageName: String): Boolean {
-        val endTime = appTimers[packageName] ?: return false
+    fun isExpired(appName: String): Boolean {
+        val endTime = appTimers[appName] ?: return false
         return System.currentTimeMillis() > endTime
     }
 
-    fun isOneMin(packageName: String): Boolean {
-        val endTime = appTimers[packageName] ?: return false
+    fun isOneMin(appName: String): Boolean {
+        val endTime = appTimers[appName] ?: return false
         return 60_000 > endTime - System.currentTimeMillis()
     }
 
-    fun markExpired(packageName: String) {
-        expiredFlags.add(packageName)
+    fun markExpired(appName: String) {
+        expiredFlags.add(appName)
     }
 
-    fun wasMarkedExpired(packageName: String): Boolean {
-        return expiredFlags.contains(packageName)
+    fun wasMarkedExpired(appName: String): Boolean {
+        return expiredFlags.contains(appName)
     }
 
-    fun clearExpiredMark(packageName: String) {
-        expiredFlags.remove(packageName)
+    fun clearExpiredMark(appName: String) {
+        expiredFlags.remove(appName)
     }
 
     fun clearAllTimers() {
