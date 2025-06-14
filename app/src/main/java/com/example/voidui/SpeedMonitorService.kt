@@ -39,7 +39,7 @@ class SpeedMonitorService : Service() {
 
                 val wifiRssi = getWifiSignalStrength(applicationContext)
                 val wifiText = wifiRssi?.let { "Signal $it dBm" } ?: ""
-                Log.d("SpeedMonitorService", "Signal Strength: $wifiText")
+//                Log.d("SpeedMonitorService", "Signal Strength: $wifiText")
 
                 val updatedNotification = notificationHelper.buildNetStatNotification(downStr, upStr, mobileDataUsageFormatted, wifiDataUsageFormatted, wifiText)
                 notificationHelper.updateNetStatNotification(updatedNotification)
@@ -60,13 +60,13 @@ class SpeedMonitorService : Service() {
 
         if (!isWifiConnected(context)) {
             Log.d("SignalDebug", "Not connected to Wi-Fi")
-            return null
+//            return null
         }
 
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         val wifiInfo = wifiManager.connectionInfo
 
-        Log.d("SignalDebug", "SSID: ${wifiInfo.ssid}, RSSI: ${wifiInfo.rssi}, Network ID: ${wifiInfo.networkId}")
+//        Log.d("SignalDebug", "SSID: ${wifiInfo.ssid}, RSSI: ${wifiInfo.rssi}, Network ID: ${wifiInfo.networkId}")
 
         return if (wifiInfo.rssi != -127) {
             wifiInfo.rssi

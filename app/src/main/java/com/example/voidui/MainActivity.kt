@@ -29,6 +29,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.animation.LinearInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -93,7 +94,8 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
                     this, Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED) {
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
                 if (SharedPreferencesManager.isSwitchTrackEnabled(this)) {
                     val intent = Intent(this, SpeedMonitorService::class.java)
                     startForegroundService(intent)
@@ -113,17 +115,18 @@ class MainActivity : AppCompatActivity() {
         recyclerView = findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        listAdapter = AppListAdapter(this, loadListApps().toMutableList(), packageManager, refreshList = {
-            needRefresh =true
-        }) { appInfo ->
-            val packageName = appInfo.packageName
-            Log.d("MainActivity", "App name is $packageName")
-            if (shouldShowTimer(this, packageName)) {
-                showTimeLimitDialog(appInfo)
-            } else {
-                launchAppDirectly(appInfo)
+        listAdapter =
+            AppListAdapter(this, loadListApps().toMutableList(), packageManager, refreshList = {
+                needRefresh = true
+            }) { appInfo ->
+                val packageName = appInfo.packageName
+                Log.d("MainActivity", "App name is $packageName")
+                if (shouldShowTimer(this, packageName)) {
+                    showTimeLimitDialog(appInfo)
+                } else {
+                    launchAppDirectly(appInfo)
+                }
             }
-        }
 
         recyclerView.adapter = listAdapter
 
@@ -182,10 +185,16 @@ class MainActivity : AppCompatActivity() {
 //                            child.translationX = 0f
 //                            child.background = null
 //                        }
-//                        // Scroll list
-//                        indexMap[selectedChar]?.let { layoutManager.scrollToPositionWithOffset(it, 0) }
+//
+//                        indexMap[selectedChar]?.let {
+//                            layoutManager.scrollToPositionWithOffset(
+//                                it,
+//                                0
+//                            )
+//                        }
+//
 //                        alphabetScroller.getChildAt(index).translationX = -150f
-//                        alphabetScroller.getChildAt(index).background = ContextCompat.getDrawable(this, R.drawable.bubble_background)
+//                        alphabetScroller.getChildAt(index).background = bubbleBackground
 //                    }
 //                    lastIndex = index
 //                }
@@ -201,6 +210,80 @@ class MainActivity : AppCompatActivity() {
 //            }
 //            true
 //        }
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////// STATIC ANIMATED SCROLL BAR WITH AN INDICATOR ///////////////////////////
+
+        alphabetScroller.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                    val itemHeight = alphabetScroller.height / usedAlphabets.size
+                    val index = (event.y / itemHeight).toInt().coerceIn(0, usedAlphabets.size - 1)
+                    if (index != lastIndex) {
+                        val selectedChar = usedAlphabets.elementAt(index)
+                        indexMap[selectedChar]?.let {
+                            layoutManager.scrollToPositionWithOffset(
+                                it,
+                                0
+                            )
+                        }
+
+                        val sigma = 1.5f
+
+                        for (i in 0 until alphabetScroller.childCount) {
+                            val child = alphabetScroller.getChildAt(i)
+                            val offset = i - index
+
+                            val distance = offset.toFloat()
+                            val curveFactor = exp(-(distance * distance) / (2 * sigma * sigma))
+
+                            val scale = 0.85f + (0.15f * curveFactor)
+                            val alpha = 0.4f + (0.6f * curveFactor)
+
+                            ViewCompat.animate(child).cancel()
+                            ViewCompat.animate(child)
+                                .scaleX(scale)
+                                .scaleY(scale)
+                                .alpha(alpha)
+                                .setDuration(75)
+                                .setInterpolator(LinearInterpolator())
+                                .withLayer()
+                                .start()
+
+                            if (offset == 0) {
+                                child.translationX = -150f
+                                child.background = bubbleBackground
+                            } else {
+                                child.translationX = 0f
+                                child.background = null
+                            }
+                        }
+                    }
+                    lastIndex = index
+                }
+
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    for (i in 0 until alphabetScroller.childCount) {
+                        val child = alphabetScroller.getChildAt(i)
+                        ViewCompat.animate(child).cancel()
+                        ViewCompat.animate(child)
+                            .translationX(0f)
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .alpha(1f)
+                            .setDuration(75)
+                            .setInterpolator(OvershootInterpolator())
+                            .withLayer()
+                            .start()
+                        child.background = null
+                    }
+                    lastIndex = -1
+                }
+            }
+            true
+        }
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////// DYNAMIC BENDING SCROLL BAR WITH AN INDICATOR ////////////////////////////
@@ -258,6 +341,7 @@ class MainActivity : AppCompatActivity() {
 //            }
 //            true
 //        }
+//
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////// DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR ///////////////////////
@@ -326,6 +410,7 @@ class MainActivity : AppCompatActivity() {
 //            }
 //            true
 //        }
+//
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////// DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR ///////////////////////
@@ -395,90 +480,97 @@ class MainActivity : AppCompatActivity() {
 //            }
 //            true
 //        }
+//
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////// DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR ///////////////////////
 /////////////////////// (DIFFERENT METHOD FOR BENDING AND BETTER PERFORMANCE) ///////////////////////
-
-        alphabetScroller.setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                    val now = System.currentTimeMillis()
-                    if (now - lastAnimationUpdateTime < animationThrottleMs) return@setOnTouchListener true
-                    lastAnimationUpdateTime = now
-
-                    val itemHeight = alphabetScroller.height / usedAlphabets.size
-                    val index = (event.y / itemHeight).toInt().coerceIn(0, usedAlphabets.size - 1)
-
-                    if (index != lastIndex) {
-                        val selectedChar = usedAlphabets.elementAt(index)
-                        indexMap[selectedChar]?.let {
-                            layoutManager.scrollToPositionWithOffset(it, 0)
-                        }
-
-                        val amplitude = 150f
-                        val sigma = 1.5f
-
-                        for (i in 0 until alphabetScroller.childCount) {
-                            val child = alphabetScroller.getChildAt(i)
-                            val offset = i - index
-
-                            val distance = offset.toFloat()
-                            val curveFactor = exp(-(distance * distance) / (2 * sigma * sigma))
-
-                            val translationX = -amplitude * curveFactor
-                            val scale = 0.85f + (0.15f * curveFactor)
-                            val alpha = 0.4f + (0.6f * curveFactor)
-
-                            ViewCompat.animate(child).cancel()
-                            ViewCompat.animate(child)
-                                .translationX(translationX)
-                                .scaleX(scale)
-                                .scaleY(scale)
-                                .alpha(alpha)
-                                .setDuration(75)
-                                .setInterpolator(LinearInterpolator())
-                                .withLayer()
-                                .start()
-
-                            child.background = if (offset == 0) {
-                                bubbleBackground
-                            } else {
-                                null
-                            }
-                        }
-
-                        lastIndex = index
-                    }
-                }
-
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    for (i in 0 until alphabetScroller.childCount) {
-                        val child = alphabetScroller.getChildAt(i)
-                        ViewCompat.animate(child).cancel()
-                        ViewCompat.animate(child)
-                            .translationX(0f)
-                            .scaleX(1f)
-                            .scaleY(1f)
-                            .alpha(1f)
-                            .setDuration(75)
-                            .setInterpolator(LinearInterpolator())
-                            .withLayer()
-                            .start()
-                        child.background = null
-                    }
-
-                    lastIndex = -1
-                }
-            }
-            true
-        }
+//
+//        alphabetScroller.setOnTouchListener { _, event ->
+//            when (event.action) {
+//                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+//                    val now = System.currentTimeMillis()
+//                    if (now - lastAnimationUpdateTime < animationThrottleMs) return@setOnTouchListener true
+//                    lastAnimationUpdateTime = now
+//
+//                    val itemHeight = alphabetScroller.height / usedAlphabets.size
+//                    val index = (event.y / itemHeight).toInt().coerceIn(0, usedAlphabets.size - 1)
+//
+//                    if (index != lastIndex) {
+//                        val selectedChar = usedAlphabets.elementAt(index)
+//                        indexMap[selectedChar]?.let {
+//                            layoutManager.scrollToPositionWithOffset(it, 0)
+//                        }
+//
+//                        val amplitude = 150f
+//                        val sigma = 1.5f
+//
+//                        for (i in 0 until alphabetScroller.childCount) {
+//                            val child = alphabetScroller.getChildAt(i)
+//                            val offset = i - index
+//
+//                            val distance = offset.toFloat()
+//                            val curveFactor = exp(-(distance * distance) / (2 * sigma * sigma))
+//
+//                            val translationX = -amplitude * curveFactor
+//                            val scale = 0.85f + (0.15f * curveFactor)
+//                            val alpha = 0.4f + (0.6f * curveFactor)
+//
+//                            ViewCompat.animate(child).cancel()
+//                            ViewCompat.animate(child)
+//                                .translationX(translationX)
+//                                .scaleX(scale)
+//                                .scaleY(scale)
+//                                .alpha(alpha)
+//                                .setDuration(75)
+//                                .setInterpolator(LinearInterpolator())
+//                                .withLayer()
+//                                .start()
+//
+//                            child.background = if (offset == 0) {
+//                                bubbleBackground
+//                            } else {
+//                                null
+//                            }
+//                        }
+//
+//                        lastIndex = index
+//                    }
+//                }
+//
+//                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+//                    for (i in 0 until alphabetScroller.childCount) {
+//                        val child = alphabetScroller.getChildAt(i)
+//                        ViewCompat.animate(child).cancel()
+//                        ViewCompat.animate(child)
+//                            .translationX(0f)
+//                            .scaleX(1f)
+//                            .scaleY(1f)
+//                            .alpha(1f)
+//                            .setDuration(75)
+//                            .setInterpolator(LinearInterpolator())
+//                            .withLayer()
+//                            .start()
+//                        child.background = null
+//                    }
+//
+//                    lastIndex = -1
+//                }
+//            }
+//            true
+//        }
+//
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
         drawerRecyclerView = findViewById(R.id.appDrawerRecyclerView)
-        drawerAdapter = AppDrawerAdapter(this, packageManager, loadDrawerApps().toMutableList(), ::saveDrawerApps, refreshList = {
-            needRefresh = true
-        }) { appInfo ->
+        drawerAdapter = AppDrawerAdapter(
+            this,
+            packageManager,
+            loadDrawerApps().toMutableList(),
+            ::saveDrawerApps,
+            refreshList = {
+                needRefresh = true
+            }) { appInfo ->
             val packageName = appInfo.packageName
             if (shouldShowTimer(this, packageName)) {
                 showTimeLimitDialog(appInfo)
@@ -488,14 +580,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         drawerRecyclerView.apply {
-            drawerRecyclerView.layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
+            drawerRecyclerView.layoutManager =
+                LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
             drawerRecyclerView.addItemDecoration(CenterSpacingDecoration())
             adapter = drawerAdapter
         }
 
         drawerRecyclerView.itemAnimator = null
 
-        drawerRecyclerView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+        drawerRecyclerView.viewTreeObserver.addOnGlobalLayoutListener(object :
+            ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
                 drawerRecyclerView.viewTreeObserver.removeOnGlobalLayoutListener(this)
                 drawerRecyclerView.invalidateItemDecorations()
@@ -519,7 +613,9 @@ class MainActivity : AppCompatActivity() {
 
                 DragEvent.ACTION_DRAG_ENTERED -> {
                     // Only insert if not already inserted
-                    if (!drawerAdapter.getApps().any { it.packageName == AppDrawerAdapter.DROP_INDICATOR_PACKAGE }) {
+                    if (!drawerAdapter.getApps()
+                            .any { it.packageName == AppDrawerAdapter.DROP_INDICATOR_PACKAGE }
+                    ) {
                         drawerAdapter.insertDropIndicator(0)
                     }
                     true
@@ -530,10 +626,14 @@ class MainActivity : AppCompatActivity() {
                     val recyclerView = view as RecyclerView
                     val draggedApp = event.localState as ApplicationInfo
                     val isAppFromDrawer = !listAdapter.getApps().contains(draggedApp)
-                    if (!isAppFromDrawer && (drawerAdapter.getApps().size >= drawerSize+1)) {
+                    if (!isAppFromDrawer && (drawerAdapter.getApps().size >= drawerSize + 1)) {
                         if (!toastShownThisDrag) {
                             drawerAdapter.removeDropIndicator()
-                            Toast.makeText(this, "Cannot add more than $drawerSize apps", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this,
+                                "Cannot add more than $drawerSize apps",
+                                Toast.LENGTH_SHORT
+                            ).show()
                             shouldMoveIndicator = false
                             toastShownThisDrag = true
                         }
@@ -633,22 +733,27 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        drawerGestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onDoubleTap(e: MotionEvent): Boolean {
-                val child = drawerRecyclerView.findChildViewUnder(e.x, e.y)
-                return if (child == null) {
-                    if (SharedPreferencesManager.isDoubleTapToLockEnabled(this@MainActivity)) {
-                        vibratePhone(100)
-                        AppAccessibilityService.lockNowWithAccessibility()
+        drawerGestureDetector =
+            GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+                override fun onDoubleTap(e: MotionEvent): Boolean {
+                    val child = drawerRecyclerView.findChildViewUnder(e.x, e.y)
+                    return if (child == null) {
+                        if (SharedPreferencesManager.isDoubleTapToLockEnabled(this@MainActivity)) {
+                            vibratePhone(100)
+                            AppAccessibilityService.lockNowWithAccessibility()
+                        } else {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Please enable 'Double tap on the mini app drawer to Lock' in Gestures",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        true
                     } else {
-                        Toast.makeText(this@MainActivity, "Please enable 'Double tap on the mini app drawer to Lock' in Gestures", Toast.LENGTH_SHORT).show()
+                        false
                     }
-                    true
-                } else {
-                    false
                 }
-            }
-        })
+            })
 
         drawerRecyclerView.setOnTouchListener { _, event ->
             drawerGestureDetector.onTouchEvent(event)
@@ -671,7 +776,7 @@ class MainActivity : AppCompatActivity() {
             listAdapter.setApps(getNewlyInstalledApps())
             listAdapter.updateData(loadListApps().toMutableList())
             drawerAdapter.updateData(loadDrawerApps().toMutableList())
-            needRefresh =false
+            needRefresh = false
         }
     }
 
@@ -692,7 +797,8 @@ class MainActivity : AppCompatActivity() {
         val prefsList = getSharedPreferences("list_prefs", MODE_PRIVATE)
         val prefsDrawer = getSharedPreferences("drawer_prefs", MODE_PRIVATE)
         val currentAppList = prefsList.getStringSet("list_packages", emptySet()) ?: emptySet()
-        val currentDrawerList = prefsDrawer.getString("drawer_ordered_packages", "")?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+        val currentDrawerList = prefsDrawer.getString("drawer_ordered_packages", "")?.split(",")
+            ?.filter { it.isNotBlank() } ?: emptyList()
 
         val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
         val userManager = getSystemService(Context.USER_SERVICE) as UserManager
@@ -711,16 +817,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        newAppInfoList.filter { packageManager.getLaunchIntentForPackage(it.packageName) != null &&
-                it.packageName in currentDrawerList
+        newAppInfoList.filter {
+            packageManager.getLaunchIntentForPackage(it.packageName) != null &&
+                    it.packageName in currentDrawerList
         }.sortedBy {
             it.loadLabel(packageManager).toString().lowercase()
         }
 
-        val newApps = newAppList.filterNot { it in currentAppList || it in currentDrawerList.toSet() }
-        Log.d("App List", "Current App List = $currentAppList")
-        Log.d("App List", "New App List = $newAppList")
-        Log.d("App List", "New Apps = $newApps")
+        val newApps =
+            newAppList.filterNot { it in currentAppList || it in currentDrawerList.toSet() }
+//        Log.d("App List", "Current App List = $currentAppList")
+//        Log.d("App List", "New App List = $newAppList")
+//        Log.d("App List", "New Apps = $newApps")
         if (newApps.isNotEmpty()) {
             val editor = prefsNewApps.edit()
             val timestamp = System.currentTimeMillis()
@@ -875,7 +983,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialogView.findViewById<TextView>(R.id.dialogTitle).text = "How much time would you like\nto spend on $appName?"
+        dialogView.findViewById<TextView>(R.id.dialogTitle).text =
+            "How much time would you like\nto spend on $appName?"
         dialogView.findViewById<TextView>(R.id.btn1Min).setOnClickListener {
             startTimerAndLaunchApp(1)
         }
@@ -919,7 +1028,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadDrawerApps(): List<ApplicationInfo> {
         val prefs = getSharedPreferences("drawer_prefs", MODE_PRIVATE)
-        val packageList = prefs.getString("drawer_ordered_packages", "")?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+        val packageList =
+            prefs.getString("drawer_ordered_packages", "")?.split(",")?.filter { it.isNotBlank() }
+                ?: emptyList()
         val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
         val userManager = getSystemService(Context.USER_SERVICE) as UserManager
         val users = userManager.userProfiles
@@ -942,7 +1053,7 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("list_prefs", MODE_PRIVATE)
         val packageNames = prefs.getStringSet("list_packages", emptySet()) ?: emptySet()
 
-        Log.d("loadListApps", "$packageNames")
+//        Log.d("loadListApps", "$packageNames")
 
         val launcherApps = getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
         val userManager = getSystemService(Context.USER_SERVICE) as UserManager
@@ -982,7 +1093,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun vibratePhone(millis: Long) {
         val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            val vibratorManager =
+                getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager.defaultVibrator
         } else {
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
@@ -1029,7 +1141,11 @@ class MainActivity : AppCompatActivity() {
                     if (SharedPreferencesManager.isSwipeToSettingsEnabled(this@MainActivity)) {
                         openSettings()
                     } else {
-                        Toast.makeText(this@MainActivity, "Enable 'Swipe left to open settings' in Gestures", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Enable 'Swipe left to open settings' in Gestures",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                     return true
                 }
@@ -1040,7 +1156,11 @@ class MainActivity : AppCompatActivity() {
                         vibratePhone(100)
                         AppAccessibilityService.lockNowWithAccessibility()
                     } else {
-                        Toast.makeText(this@MainActivity, "Enable 'Swipe right to Lock' in Gestures", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Enable 'Swipe right to Lock' in Gestures",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                     return true
                 }

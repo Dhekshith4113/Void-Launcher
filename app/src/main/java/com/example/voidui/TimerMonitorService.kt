@@ -35,6 +35,7 @@ class TimerMonitorService : Service() {
                     Log.d("TimerMonitor", "$currentApp timer expired.")
                     if (!AppTimerManager.wasMarkedExpired(currentApp)) {
                         Log.d("TimerMonitor", "$currentApp: first-time expiry, going home.")
+                        Log.d("TimerMonitor", "Marked expired for $currentApp")
                         AppTimerManager.markExpired(currentApp)
                         AppAccessibilityService.goHomeScreen()
                     } else {

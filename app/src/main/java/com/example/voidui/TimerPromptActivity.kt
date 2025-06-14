@@ -39,7 +39,7 @@ class TimerPromptActivity : Activity() {
         fun startTimerAndLaunchApp(minutes: Int) {
             if (minutes > 0) {
                 Log.d("TimerPromptActivity", "App name is $appName")
-                AppTimerManager.setTimer(packageName, minutes * 60 * 1000L)
+                AppTimerManager.setTimer(appName, minutes * 60 * 1000L)
                 SharedPreferencesManager.setOneMinToastShown(this, appName, false)
                 Toast.makeText(this, "Timer reset to $minutes min", Toast.LENGTH_SHORT).show()
                 finish()

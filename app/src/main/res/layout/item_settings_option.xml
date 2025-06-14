@@ -4,7 +4,7 @@
     android:id="@+id/settingOptionText"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:text="Settings"
+    android:text="Settings option"
     android:paddingVertical="10dp"
     style="@style/AppBaseText"
     android:fontFamily="@font/minima_font_family" />

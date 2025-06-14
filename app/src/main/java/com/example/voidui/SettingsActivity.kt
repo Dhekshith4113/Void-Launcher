@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.GestureDetector
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -19,9 +20,10 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.SwitchCompat
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,82 +35,67 @@ import kotlin.math.abs
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var gestureDetector: GestureDetector
-    private lateinit var appUsageLayout: ConstraintLayout
+    private lateinit var appUsageView: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
-        val totalTimeTextView = findViewById<TextView>(R.id.textViewTotalTime)
         val backButton = findViewById<ImageButton>(R.id.backButtonSettings)
-        appUsageLayout = findViewById(R.id.appUsageLayout)
-
-        val appTextViews = listOf(
-            findViewById<TextView>(R.id.appOne),
-            findViewById(R.id.appTwo),
-            findViewById(R.id.appThree),
-            findViewById(R.id.appFour)
-        )
-
-        val appTimeViews = listOf(
-            findViewById<TextView>(R.id.appOneTime),
-            findViewById(R.id.appTwoTime),
-            findViewById(R.id.appThreeTime),
-            findViewById(R.id.appFourTime)
-        )
-
-        val appIndicatorView = listOf(
-            findViewById<View>(R.id.appOneIndicator),
-            findViewById(R.id.appTwoIndicator),
-            findViewById(R.id.appThreeIndicator),
-            findViewById(R.id.appFourIndicator)
-        )
-
-        val appViews = listOf(
-            findViewById<View>(R.id.appOneView),
-            findViewById(R.id.appTwoView),
-            findViewById(R.id.appThreeView),
-            findViewById(R.id.appFourView)
-        )
-
-        val colors = listOf(
-            Color.parseColor("#2ED3B7"),
-            Color.parseColor("#3A6FF8"),
-            Color.parseColor("#7A5DFE"),
-            Color.parseColor("#B1C0D7")
-        )
-
-        val usageBar = findViewById<LinearLayout>(R.id.usageBar)
 
         backButton.setOnClickListener {
             finish()
             overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right)
         }
 
-        appUsageLayout.setOnClickListener {
-            try {
-                val intent = Intent()
-                intent.setClassName(
-                    "com.samsung.android.forest",
-                    "com.samsung.android.forest.home.ui.DefaultActivity" // Common on some devices
-                )
-                startActivity(intent)
-            } catch (e: Exception) {
-                Toast.makeText(this, "Digital Wellbeing not available", Toast.LENGTH_SHORT).show()
-            }
-        }
-
         gestureDetector = GestureDetector(this, SwipeBackGestureListener())
 
         val listView: ListView = findViewById(R.id.settingsListView)
-        val options = listOf("In-App timer reminder", "Change color theme", "Internet Speed Meter", "Gestures", "Change launcher", "Device settings")
-        val adapter = ArrayAdapter(
+        val options = listOf(
+            "In-App timer reminder",
+            "Change color theme",
+            "Internet Speed Meter",
+            "Gestures",
+            "Change launcher",
+            "Device settings",
+            "Digital Wellbeing",
+            "Version"
+        )
+        val adapter = object : ArrayAdapter<String>(
             this,
             R.layout.item_settings_option,
             R.id.settingOptionText,
             options
-        )
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                if (position == options.size - 2) {
+                    // Inflate your custom layout for the last item
+                    appUsageView = LayoutInflater.from(context)
+                        .inflate(R.layout.app_usage_layout, parent, false)
+
+                    appUsageView.visibility = View.GONE
+                    populateAppUsageOption(appUsageView)
+                    appUsageView.visibility = View.VISIBLE
+
+                    return appUsageView
+                } else {
+                    val view = LayoutInflater.from(context)
+                        .inflate(R.layout.item_settings_option, parent, false)
+                    view.findViewById<TextView>(R.id.settingOptionText)?.text = options[position]
+                    return view
+                }
+            }
+        }
         listView.adapter = adapter
+
+        val snackBar = Snackbar.make(listView, "Version 1.1", Snackbar.LENGTH_SHORT)
+        val textView =
+            snackBar.view.findViewById<TextView>(com.google.android.material.R.id.snackbar_text)
+        textView.setTextColor(ContextCompat.getColor(this, R.color.backgroundColor))
+        textView.textSize = 18f
+        textView.typeface = ResourcesCompat.getFont(this, R.font.minima_font_family)
+        textView.gravity = Gravity.CENTER_HORIZONTAL
+        snackBar.view.setBackgroundColor(ContextCompat.getColor(this, R.color.textColorPrimary))
 
         listView.setOnItemClickListener { _, _, position, _ ->
             when (position) {
@@ -118,6 +105,20 @@ class SettingsActivity : AppCompatActivity() {
                 3 -> showGesturesDialog()
                 4 -> startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
                 5 -> startActivity(Intent(Settings.ACTION_SETTINGS))
+                6 -> try {
+                    val intent = Intent()
+                    intent.setClassName(
+                        "com.samsung.android.forest",
+                        "com.samsung.android.forest.home.ui.DefaultActivity" // Common on some devices
+                    )
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Digital Wellbeing not available", Toast.LENGTH_SHORT)
+                        .show()
+                }
+
+                7 -> snackBar.show()
+
                 else -> {
                     Toast.makeText(this, "Something's wrong!", Toast.LENGTH_SHORT).show()
                 }
@@ -125,6 +126,47 @@ class SettingsActivity : AppCompatActivity() {
                 overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
             }
         }
+    }
+
+    private fun populateAppUsageOption(optionView: View): View {
+        val totalTimeTextView = optionView.findViewById<TextView>(R.id.textViewTotalTime)
+
+        val appTextViews = listOf(
+            optionView.findViewById<TextView>(R.id.appOne),
+            optionView.findViewById(R.id.appTwo),
+            optionView.findViewById(R.id.appThree),
+            optionView.findViewById(R.id.appFour)
+        )
+
+        val appTimeViews = listOf(
+            optionView.findViewById<TextView>(R.id.appOneTime),
+            optionView.findViewById(R.id.appTwoTime),
+            optionView.findViewById(R.id.appThreeTime),
+            optionView.findViewById(R.id.appFourTime)
+        )
+
+        val appIndicatorView = listOf(
+            optionView.findViewById<View>(R.id.appOneIndicator),
+            optionView.findViewById(R.id.appTwoIndicator),
+            optionView.findViewById(R.id.appThreeIndicator),
+            optionView.findViewById(R.id.appFourIndicator)
+        )
+
+        val appViews = listOf(
+            optionView.findViewById<View>(R.id.appOneView),
+            optionView.findViewById(R.id.appTwoView),
+            optionView.findViewById(R.id.appThreeView),
+            optionView.findViewById(R.id.appFourView)
+        )
+
+        val usageBar = optionView.findViewById<LinearLayout>(R.id.usageBar)
+
+        val colors = listOf(
+            Color.parseColor("#2ED3B7"),
+            Color.parseColor("#3A6FF8"),
+            Color.parseColor("#7A5DFE"),
+            Color.parseColor("#B1C0D7")
+        )
 
         if (UsageStatsManagerUtils.hasUsageStatsPermission(this)) {
             lifecycleScope.launch {
@@ -132,7 +174,7 @@ class SettingsActivity : AppCompatActivity() {
                     UsageStatsManagerUtils.getTodayTopUsedApps(this@SettingsActivity)
                 }
 
-                totalTimeTextView.text = "${formatTime(totalTime)}"
+                totalTimeTextView.text = formatTime(totalTime)
 
                 for (i in appTextViews.indices) {
                     if (i < topApps.size) {
@@ -142,8 +184,8 @@ class SettingsActivity : AppCompatActivity() {
                         appViews[i].visibility = View.VISIBLE
 
                         val (packageName, usageTime) = topApps[i]
-                        appTextViews[i].text = "$packageName"
-                        appTimeViews[i].text = "${formatTime(usageTime)}"
+                        appTextViews[i].text = packageName
+                        appTimeViews[i].text = formatTime(usageTime)
                     } else {
                         appTextViews[i].visibility = View.GONE
                         appTimeViews[i].visibility = View.GONE
@@ -153,18 +195,23 @@ class SettingsActivity : AppCompatActivity() {
                 }
 
                 for (i in appIndicatorView.indices) {
-                    val drawable = ContextCompat.getDrawable(this@SettingsActivity, R.drawable.app_indicator_background)?.mutate() as? GradientDrawable
+                    val drawable = ContextCompat.getDrawable(
+                        this@SettingsActivity,
+                        R.drawable.app_indicator_background
+                    )?.mutate() as? GradientDrawable
                     drawable?.setColor(colors[i])
                     appIndicatorView[i].background = drawable
                 }
 
                 populateUsageBar(usageBar, topApps, totalTime)
-                appUsageLayout.visibility = View.VISIBLE
             }
         } else {
             totalTimeTextView.text = "  --h --m"
         }
+
+        return optionView
     }
+
 
     private fun populateUsageBar(
         container: LinearLayout,
@@ -188,14 +235,20 @@ class SettingsActivity : AppCompatActivity() {
                 isLast = index == appUsageList.lastIndex
             )
 
-            view.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, weight).apply {
-                marginEnd = if (index != appUsageList.lastIndex) 2 else 0
-            }
+            view.layoutParams =
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, weight).apply {
+                    marginEnd = if (index != appUsageList.lastIndex) 2 else 0
+                }
             container.addView(view)
         }
     }
 
-    private fun createRoundedSegment(context: Context, color: Int, isFirst: Boolean, isLast: Boolean): View {
+    private fun createRoundedSegment(
+        context: Context,
+        color: Int,
+        isFirst: Boolean,
+        isLast: Boolean
+    ): View {
         val radius = 50f
         val drawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
@@ -262,8 +315,12 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         when (ThemeManager.getSavedThemeMode(this)) {
-            AppCompatDelegate.MODE_NIGHT_YES -> dialogView.findViewById<RadioButton>(R.id.radioDark)?.isChecked = true
-            AppCompatDelegate.MODE_NIGHT_NO -> dialogView.findViewById<RadioButton>(R.id.radioLight)?.isChecked = true
+            AppCompatDelegate.MODE_NIGHT_YES -> dialogView.findViewById<RadioButton>(R.id.radioDark)?.isChecked =
+                true
+
+            AppCompatDelegate.MODE_NIGHT_NO -> dialogView.findViewById<RadioButton>(R.id.radioLight)?.isChecked =
+                true
+
             else -> dialogView.findViewById<RadioButton>(R.id.radioSystem)?.isChecked = true
         }
 
@@ -308,8 +365,14 @@ class SettingsActivity : AppCompatActivity() {
                 cal.add(Calendar.DATE, -i)
                 val date = cal.time
 
-                val mobileData = NetworkUsageHelper(this@SettingsActivity).getDailyDataUsage(date, NetworkUsageHelper.NetworkType.MOBILE)
-                val wifiData = NetworkUsageHelper(this@SettingsActivity).getDailyDataUsage(date, NetworkUsageHelper.NetworkType.WIFI)
+                val mobileData = NetworkUsageHelper(this@SettingsActivity).getDailyDataUsage(
+                    date,
+                    NetworkUsageHelper.NetworkType.MOBILE
+                )
+                val wifiData = NetworkUsageHelper(this@SettingsActivity).getDailyDataUsage(
+                    date,
+                    NetworkUsageHelper.NetworkType.WIFI
+                )
                 val totalData = mobileData + wifiData
 
                 val row = TableRow(this@SettingsActivity).apply {
@@ -396,20 +459,30 @@ class SettingsActivity : AppCompatActivity() {
                     startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 } else {
                     SharedPreferencesManager.setSwipeToLockEnabled(this, true)
-                    Toast.makeText(this, "'Swipe right to lock phone' is enabled", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this,
+                        "'Swipe right to lock phone' is enabled",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             } else {
                 SharedPreferencesManager.setSwipeToLockEnabled(this, false)
-                Toast.makeText(this, "'Swipe right to lock phone' is disabled", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "'Swipe right to lock phone' is disabled", Toast.LENGTH_SHORT)
+                    .show()
             }
         }
 
         settingsSwitch.setOnCheckedChangeListener { _, isChecked ->
             SharedPreferencesManager.setSwipeToSettingsEnabled(this, isChecked)
             if (isChecked) {
-                Toast.makeText(this, "'Swipe left to open settings' is enabled", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "'Swipe left to open settings' is enabled", Toast.LENGTH_SHORT)
+                    .show()
             } else {
-                Toast.makeText(this, "'Swipe left to open settings' is disabled", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this,
+                    "'Swipe left to open settings' is disabled",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
 
@@ -419,10 +492,15 @@ class SettingsActivity : AppCompatActivity() {
                 if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
                     startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 } else {
-                    Toast.makeText(this, "'Double tap to lock phone' is enabled", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this,
+                        "'Double tap to lock phone' is enabled",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             } else {
-                Toast.makeText(this, "'Double tap to lock phone' is disabled", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "'Double tap to lock phone' is disabled", Toast.LENGTH_SHORT)
+                    .show()
             }
         }
 
@@ -439,7 +517,12 @@ class SettingsActivity : AppCompatActivity() {
         private val swipeVelocityThreshold = 100
         private val edgeSwipeThreshold = 50
 
-        override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+        override fun onFling(
+            e1: MotionEvent?,
+            e2: MotionEvent,
+            velocityX: Float,
+            velocityY: Float
+        ): Boolean {
             if (e1 == null) return false
             val startX = e1.x
             val diffX = e2.x - e1.x
@@ -451,16 +534,14 @@ class SettingsActivity : AppCompatActivity() {
             ) {
                 if (diffX > 0 && startX < edgeSwipeThreshold) {
                     finish()
-                    overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+                    overridePendingTransition(
+                        android.R.anim.slide_in_left,
+                        android.R.anim.slide_out_right
+                    )
                     return true
                 }
             }
             return false
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        appUsageLayout.visibility = View.GONE
     }
 }

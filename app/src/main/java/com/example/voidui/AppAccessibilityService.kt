@@ -46,7 +46,7 @@ class AppAccessibilityService : AccessibilityService() {
         }
 
         serviceInfo = info
-        Log.d("AppAccessibilityService", "Service connected")
+//        Log.d("AppAccessibilityService", "Service connected")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -79,7 +79,7 @@ class AppAccessibilityService : AccessibilityService() {
 
     @RequiresApi(Build.VERSION_CODES.P)
     fun lockScreenWithAccessibility() {
-        Log.d("AppAccessibilityService", "Attempting to lock screen using Accessibility")
+//        Log.d("AppAccessibilityService", "Attempting to lock screen using Accessibility")
         performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
     }
 
@@ -98,6 +98,6 @@ class AppAccessibilityService : AccessibilityService() {
         if (instance == this) {
             instance = null
         }
-        Log.d("AppAccessibilityService", "Service destroyed")
+//        Log.d("AppAccessibilityService", "Service destroyed")
     }
 }
