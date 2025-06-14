@@ -11,6 +11,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.IconCompat
+import java.util.Locale
 
 class NotificationHelper(private val context: Context) {
 
@@ -128,7 +129,7 @@ class NotificationHelper(private val context: Context) {
     private fun createSpeedIcon(context: Context, speedInKbps: Float): IconCompat {
         // Convert speed to display string
         val (value, unit) = if (speedInKbps >= 1024) {
-            String.format("%.1f", speedInKbps / 1024f) to "MB/s"
+            String.format(Locale.getDefault(), "%.1f", speedInKbps / 1024f) to "MB/s"
         } else {
             speedInKbps.toInt().toString() to "KB/s"
         }
@@ -214,7 +215,7 @@ class NotificationHelper(private val context: Context) {
     private fun formatMillis(millis: Long): String {
         val minutes = (millis / 1000) / 60
         val seconds = (millis / 1000) % 60
-        return String.format("%02d:%02d", minutes, seconds)
+        return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
     }
 
 }
