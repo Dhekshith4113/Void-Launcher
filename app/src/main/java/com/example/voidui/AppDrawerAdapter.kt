@@ -98,7 +98,7 @@ class AppDrawerAdapter(
             holder.itemView.setOnLongClickListener(null)
         } else {
             holder.icon.setBackgroundResource(0)
-            holder.icon.setImageDrawable(app.loadIcon(pm))
+            holder.icon.setImageDrawable(app.loadIcon(pm)) // App Icon
             holder.itemView.setOnLongClickListener {
                 val clipData = ClipData.newPlainText("packageName", app.packageName)
                 val shadow = View.DragShadowBuilder(it)

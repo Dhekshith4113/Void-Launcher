@@ -19,6 +19,7 @@ class TimerMonitorService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val coroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private lateinit var notificationHelper: NotificationHelper
+    private var isChecking = false
 
     private val checkRunnable = object : Runnable {
         override fun run() {
@@ -59,12 +60,20 @@ class TimerMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         notificationHelper = NotificationHelper(applicationContext)
-        startForeground(NotificationHelper.NOTIFICATION_ID_APP_TIMER, notificationHelper.buildAppTimerNotification(appTimers = emptyMap()))
         startTimerMonitoring()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        handler.post(checkRunnable)
+        startForeground(
+            NotificationHelper.NOTIFICATION_ID_APP_TIMER,
+            notificationHelper.buildAppTimerNotification(appTimers = emptyMap())
+        )
+
+        if (!isChecking) {
+            handler.post(checkRunnable)
+            isChecking = true
+        }
+
         return START_STICKY
     }
 

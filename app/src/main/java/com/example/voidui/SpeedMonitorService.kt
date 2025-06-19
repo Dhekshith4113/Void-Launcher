@@ -7,6 +7,8 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.IBinder
+import android.os.PowerManager
+import android.provider.Settings
 import android.util.Log
 import kotlinx.coroutines.*
 import java.text.DecimalFormat
@@ -16,14 +18,26 @@ class SpeedMonitorService : Service() {
     private val coroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private lateinit var speedCalculator: NetworkSpeedCalculator
     private lateinit var notificationHelper: NotificationHelper
+    private var isMonitoring = false
 
     override fun onCreate() {
         super.onCreate()
         speedCalculator = NetworkSpeedCalculator()
         notificationHelper = NotificationHelper(applicationContext)
-        startForeground(NotificationHelper.NOTIFICATION_ID_NET_SAT, notificationHelper.buildNetStatNotification("0", "0", "0", "0", ""))
+    }
 
-        startSpeedMonitoring()
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!isMonitoring) {
+            isMonitoring = true
+            startForeground(
+                NotificationHelper.NOTIFICATION_ID_NET_SAT,
+                notificationHelper.buildNetStatNotification("0", "0", "0", "0", "")
+            )
+            startSpeedMonitoring()
+
+            requestIgnoreBatteryOptimizations()
+        }
+        return START_STICKY
     }
 
     private fun startSpeedMonitoring() {
@@ -105,6 +119,27 @@ class SpeedMonitorService : Service() {
             mbps >= 1 -> DecimalFormat("#.##").format(mbps) + " MB/s"
             kbps >= 1 -> DecimalFormat("###").format(kbps) + " KB/s"
             else -> DecimalFormat("###").format(bytesPerSec) + " B/s"
+        }
+    }
+
+    private fun requestIgnoreBatteryOptimizations() {
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val packageName = applicationContext.packageName
+
+        // Respect user choice: Don't show again if they've dismissed or allowed
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val ignorePrompt = prefs.getBoolean("battery_opt_ignore_prompt", false)
+        if (ignorePrompt) return
+
+        if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+            // Show a notification or launch Activity to explain, if needed
+            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivity(intent)
+
+            // Optional: Save that we already prompted them once
+            prefs.edit().putBoolean("battery_opt_ignore_prompt", true).apply()
         }
     }
 

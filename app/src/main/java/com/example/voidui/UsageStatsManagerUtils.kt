@@ -1,6 +1,5 @@
 package com.example.voidui
 
-import android.app.AppOpsManager
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
@@ -11,16 +10,6 @@ import android.util.Log
 import java.util.Calendar
 
 object UsageStatsManagerUtils {
-
-    fun hasUsageStatsPermission(context: Context): Boolean {
-        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-        val mode = appOps.checkOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            android.os.Process.myUid(),
-            context.packageName
-        )
-        return mode == AppOpsManager.MODE_ALLOWED
-    }
 
     fun getTodayTopUsedApps(context: Context): Pair<Long, List<Pair<String, Long>>> {
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager

@@ -68,7 +68,7 @@ class SettingsActivity : AppCompatActivity() {
             options
         ) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                if (position == options.size - 2) {
+                if (position == options.size - 2 && PermissionUtils.hasUsageStatsPermission(this@SettingsActivity)) {
                     // Inflate your custom layout for the last item
                     appUsageView = LayoutInflater.from(context)
                         .inflate(R.layout.app_usage_layout, parent, false)
@@ -168,7 +168,7 @@ class SettingsActivity : AppCompatActivity() {
             Color.parseColor("#B1C0D7")
         )
 
-        if (UsageStatsManagerUtils.hasUsageStatsPermission(this)) {
+        if (PermissionUtils.hasUsageStatsPermission(this)) {
             lifecycleScope.launch {
                 val (totalTime, topApps) = withContext(Dispatchers.IO) {
                     UsageStatsManagerUtils.getTodayTopUsedApps(this@SettingsActivity)
@@ -335,7 +335,13 @@ class SettingsActivity : AppCompatActivity() {
             .create()
 
         val switchTrack = dialogView.findViewById<SwitchCompat>(R.id.switchTrack)
-        switchTrack.isChecked = SharedPreferencesManager.isSwitchTrackEnabled(this)
+
+        if (PermissionUtils.hasNotificationPermission(this)) {
+            switchTrack.isChecked = SharedPreferencesManager.isSwitchTrackEnabled(this)
+        } else {
+            SharedPreferencesManager.setSwitchTrackEnabled(this, false)
+            switchTrack.isChecked = SharedPreferencesManager.isSwitchTrackEnabled(this)
+        }
 
         populateUsageTable(dialogView)
 
@@ -343,11 +349,15 @@ class SettingsActivity : AppCompatActivity() {
         switchTrack.setOnCheckedChangeListener { _, isChecked ->
             SharedPreferencesManager.setSwitchTrackEnabled(this, isChecked)
             if (isChecked) {
-                val intent = Intent(this, SpeedMonitorService::class.java)
-                startForegroundService(intent)
+                if (!PermissionUtils.hasNotificationPermission(this)) {
+                    PermissionUtils.promptNotificationSettings(this)
+                } else {
+                    val intentTimer = Intent(this, SpeedMonitorService::class.java)
+                    startForegroundService(intentTimer)
+                }
             } else {
-                val intent = Intent(this, SpeedMonitorService::class.java)
-                stopService(intent)
+                val intentTimer = Intent(this, SpeedMonitorService::class.java)
+                stopService(intentTimer)
             }
         }
 

@@ -60,6 +60,7 @@
             android:excludeFromRecents="true"
             android:taskAffinity=""/>
 
+        <activity android:name=".DefaultLauncherActivity"/>
         <activity android:name=".InAppTimerReminderActivity"/>
 
         <activity android:name=".TimerPromptActivity"

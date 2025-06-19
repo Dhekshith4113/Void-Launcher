@@ -20,7 +20,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:layout_marginHorizontal="18dp"
-        android:text="We need your permission to monitor app timers and lock phone. Would you grant us this permission?"
+        android:text="We need this permission to monitor app timers and lock phone. Would you grant us this permission?"
         style="@style/AppBaseText"/>
 
     <Button

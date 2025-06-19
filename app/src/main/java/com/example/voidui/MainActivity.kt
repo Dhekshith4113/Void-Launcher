@@ -42,6 +42,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
 import kotlin.math.abs
 import kotlin.math.exp
 
@@ -83,29 +84,19 @@ class MainActivity : AppCompatActivity() {
             prefsInstalledApps.edit().putBoolean("first_time", true).apply()
         }
 
-        if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
-            promptAccessibilitySettings()
+        if (!isDefaultLauncher(this)) {
+            showDefaultLauncherReminder()
         }
 
-        if (!UsageStatsManagerUtils.hasUsageStatsPermission(this)) {
-            promptOverlaySettings()
+        if (!PermissionUtils.hasUsageStatsPermission(this)) {
+            PermissionUtils.promptUsageAccessSettings(this)
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this, Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                if (SharedPreferencesManager.isSwitchTrackEnabled(this)) {
-                    val intent = Intent(this, SpeedMonitorService::class.java)
-                    startForegroundService(intent)
-                }
-            } else {
-                promptNotificationSettings()
-                SharedPreferencesManager.setSwitchTrackEnabled(this, false)
-                val intent = Intent(this, SpeedMonitorService::class.java)
-                stopService(intent)
-            }
+        if (!PermissionUtils.hasNotificationPermission(this)) {
+            stopService(Intent(this, SpeedMonitorService::class.java))
+            PermissionUtils.promptNotificationSettings(this)
+        } else {
+            startForegroundService(Intent(this, TimerMonitorService::class.java))
         }
 
         layoutMainActivity = findViewById(R.id.layoutMainActivity)
@@ -778,6 +769,28 @@ class MainActivity : AppCompatActivity() {
             drawerAdapter.updateData(loadDrawerApps().toMutableList())
             needRefresh = false
         }
+        if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
+            stopService(Intent(this, TimerMonitorService::class.java))
+            PermissionUtils.promptAccessibilitySettings(this)
+            SharedPreferencesManager.setSwipeToLockEnabled(this, false)
+            SharedPreferencesManager.setDoubleTapToLockEnabled(this, false)
+            SharedPreferencesManager.setGlobalTimerEnabled(this, false)
+        } else {
+            startForegroundService(Intent(this, TimerMonitorService::class.java))
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1001 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Notifications enabled", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Notification permission denied", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun getAlphabetIndexMap(apps: List<ApplicationInfo>): Map<Char, Int> {
@@ -877,69 +890,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         editor.apply()
-    }
-
-    private fun promptNotificationSettings() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_notification_prompt, null)
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setCancelable(true)
-            .create()
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialogView.findViewById<TextView>(R.id.btnOpen).setOnClickListener {
-            val intent = Intent().apply {
-                action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
-                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-            }
-            startActivity(intent)
-            dialog.dismiss()
-        }
-        dialogView.findViewById<TextView>(R.id.btnLater).setOnClickListener {
-            dialog.dismiss()
-        }
-        dialog.show()
-    }
-
-    private fun promptOverlaySettings() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_usage_prompt, null)
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setCancelable(true)
-            .create()
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialogView.findViewById<TextView>(R.id.btnOpen).setOnClickListener {
-            val intent = Intent().apply {
-                action = Settings.ACTION_USAGE_ACCESS_SETTINGS
-                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-            }
-            startActivity(intent)
-            dialog.dismiss()
-        }
-        dialogView.findViewById<TextView>(R.id.btnLater).setOnClickListener {
-            dialog.dismiss()
-        }
-        dialog.show()
-    }
-
-    private fun promptAccessibilitySettings() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_accessibility_prompt, null)
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setCancelable(true)
-            .create()
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialogView.findViewById<TextView>(R.id.btnOpen).setOnClickListener {
-            val intent = Intent().apply {
-                action = Settings.ACTION_ACCESSIBILITY_SETTINGS
-                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-            }
-            startActivity(intent)
-            dialog.dismiss()
-        }
-        dialogView.findViewById<TextView>(R.id.btnLater).setOnClickListener {
-            dialog.dismiss()
-        }
-        dialog.show()
     }
 
     private fun shouldShowTimer(context: Context, packageName: String): Boolean {
@@ -1101,6 +1051,24 @@ class MainActivity : AppCompatActivity() {
         }
 
         vibrator.vibrate(VibrationEffect.createOneShot(millis, VibrationEffect.DEFAULT_AMPLITUDE))
+    }
+
+    private fun isDefaultLauncher(context: Context): Boolean {
+        val pm = context.packageManager
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+        }
+        val resolveInfo = pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        return resolveInfo?.activityInfo?.packageName == context.packageName
+    }
+
+    private fun showDefaultLauncherReminder() {
+        val rootView = findViewById<View>(android.R.id.content)
+        Snackbar.make(rootView, "Void is not set as default launcher", Snackbar.LENGTH_INDEFINITE)
+            .setAction("Set Now") {
+                val intent = Intent(Settings.ACTION_HOME_SETTINGS)
+                startActivity(intent)
+            }.show()
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
