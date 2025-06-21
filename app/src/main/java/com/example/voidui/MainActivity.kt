@@ -82,10 +82,10 @@ class MainActivity : AppCompatActivity() {
             prefsInstalledApps.edit().putBoolean("first_time", true).apply()
         }
 
-//        if (!isDefaultLauncher(this)) {
-//            finish()
-//            startActivity(Intent(this, DefaultLauncherActivity::class.java))
-//        }
+        if (!isDefaultLauncher(this)) {
+            finish()
+            startActivity(Intent(this, DefaultLauncherActivity::class.java))
+        }
 
         gestureDetector = GestureDetector(this, SwipeGestureListener())
 
@@ -755,10 +755,10 @@ class MainActivity : AppCompatActivity() {
             drawerAdapter.updateData(loadDrawerApps().toMutableList())
             needRefresh = false
         }
-//        if (!isDefaultLauncher(this)) {
-//            finish()
-//            startActivity(Intent(this, DefaultLauncherActivity::class.java))
-//        }
+        if (!isDefaultLauncher(this)) {
+            finish()
+            startActivity(Intent(this, DefaultLauncherActivity::class.java))
+        }
     }
 
     override fun onRequestPermissionsResult(
