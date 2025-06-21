@@ -1,25 +1,23 @@
 package com.example.voidui
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
+import android.content.res.Resources
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.UserHandle
 import android.os.UserManager
-import android.provider.Settings
-import android.widget.Toast
-import android.Manifest
-import android.annotation.SuppressLint
-import android.content.res.Resources
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.provider.Settings
 import android.util.Log
 import android.view.DragEvent
 import android.view.GestureDetector
@@ -36,6 +34,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -53,7 +52,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var drawerGestureDetector: GestureDetector
     private lateinit var drawerAdapter: AppDrawerAdapter
     private lateinit var drawerRecyclerView: RecyclerView
-    private lateinit var layoutMainActivity: FrameLayout
 
     private var needRefresh = false
     private var toastShownThisDrag = false
@@ -84,22 +82,10 @@ class MainActivity : AppCompatActivity() {
             prefsInstalledApps.edit().putBoolean("first_time", true).apply()
         }
 
-        if (!isDefaultLauncher(this)) {
-            showDefaultLauncherReminder()
-        }
-
-        if (!PermissionUtils.hasUsageStatsPermission(this)) {
-            PermissionUtils.promptUsageAccessSettings(this)
-        }
-
-        if (!PermissionUtils.hasNotificationPermission(this)) {
-            stopService(Intent(this, SpeedMonitorService::class.java))
-            PermissionUtils.promptNotificationSettings(this)
-        } else {
-            startForegroundService(Intent(this, TimerMonitorService::class.java))
-        }
-
-        layoutMainActivity = findViewById(R.id.layoutMainActivity)
+//        if (!isDefaultLauncher(this)) {
+//            finish()
+//            startActivity(Intent(this, DefaultLauncherActivity::class.java))
+//        }
 
         gestureDetector = GestureDetector(this, SwipeGestureListener())
 
@@ -754,7 +740,7 @@ class MainActivity : AppCompatActivity() {
         val settingsButton = findViewById<ImageButton>(R.id.settingsButton)
         settingsButton.setOnClickListener {
             openSettings()
-            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+//            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
 
     }
@@ -769,15 +755,10 @@ class MainActivity : AppCompatActivity() {
             drawerAdapter.updateData(loadDrawerApps().toMutableList())
             needRefresh = false
         }
-        if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
-            stopService(Intent(this, TimerMonitorService::class.java))
-            PermissionUtils.promptAccessibilitySettings(this)
-            SharedPreferencesManager.setSwipeToLockEnabled(this, false)
-            SharedPreferencesManager.setDoubleTapToLockEnabled(this, false)
-            SharedPreferencesManager.setGlobalTimerEnabled(this, false)
-        } else {
-            startForegroundService(Intent(this, TimerMonitorService::class.java))
-        }
+//        if (!isDefaultLauncher(this)) {
+//            finish()
+//            startActivity(Intent(this, DefaultLauncherActivity::class.java))
+//        }
     }
 
     override fun onRequestPermissionsResult(
@@ -1062,15 +1043,6 @@ class MainActivity : AppCompatActivity() {
         return resolveInfo?.activityInfo?.packageName == context.packageName
     }
 
-    private fun showDefaultLauncherReminder() {
-        val rootView = findViewById<View>(android.R.id.content)
-        Snackbar.make(rootView, "Void is not set as default launcher", Snackbar.LENGTH_INDEFINITE)
-            .setAction("Set Now") {
-                val intent = Intent(Settings.ACTION_HOME_SETTINGS)
-                startActivity(intent)
-            }.show()
-    }
-
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         gestureDetector.onTouchEvent(ev)
         return super.dispatchTouchEvent(ev)
@@ -1140,7 +1112,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun openSettings() {
         startActivity(Intent(this, SettingsActivity::class.java))
-        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+//        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
     }
 
 }

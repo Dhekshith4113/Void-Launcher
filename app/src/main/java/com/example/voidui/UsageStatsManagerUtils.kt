@@ -12,7 +12,8 @@ import java.util.Calendar
 object UsageStatsManagerUtils {
 
     fun getTodayTopUsedApps(context: Context): Pair<Long, List<Pair<String, Long>>> {
-        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val usageStatsManager =
+            context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val packageManager = context.packageManager
         val launchablePackages = getAllLaunchableAppPackages(context)
 
@@ -48,11 +49,13 @@ object UsageStatsManagerUtils {
                     lastUsedApp = packageName
                     lastEventTime = event.timeStamp
                 }
+
                 UsageEvents.Event.MOVE_TO_BACKGROUND -> {
                     if (packageName == lastUsedApp) {
                         val duration = event.timeStamp - lastEventTime
                         if (duration > 0 && duration < 1000 * 60 * 60 * 4) {
-                            usageMap[packageName] = usageMap.getOrDefault(packageName, 0L) + duration
+                            usageMap[packageName] =
+                                usageMap.getOrDefault(packageName, 0L) + duration
                         }
                         lastUsedApp = null
                         lastEventTime = event.timeStamp
@@ -88,9 +91,11 @@ object UsageStatsManagerUtils {
                 "$appName ${formatTime(usageTime)}"
             }
 
-        Log.d("UsageStatsManagerUtils", "Total screen time: ${formatTime(totalScreenTime)}\n" +
-                "Total app time: ${formatTime(totalAppTime)}\n" +
-                "Total Usage: $appString")
+        Log.d(
+            "UsageStatsManagerUtils", "Total screen time: ${formatTime(totalScreenTime)}\n" +
+                    "Total app time: ${formatTime(totalAppTime)}\n" +
+                    "Total Usage: $appString"
+        )
 
         val top3 = sortedAppUsage
             .take(3)

@@ -16,10 +16,22 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.ArrayAdapter
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ListView
+import android.widget.RadioButton
+import android.widget.TableLayout
+import android.widget.TableRow
+import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.SwitchCompat
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
@@ -36,6 +48,16 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var gestureDetector: GestureDetector
     private lateinit var appUsageView: View
+    private lateinit var listView: ListView
+    private lateinit var notificationLauncher: ActivityResultLauncher<Intent>
+    private lateinit var usageStatsLauncher: ActivityResultLauncher<Intent>
+    private lateinit var accessibilityLauncher: ActivityResultLauncher<Intent>
+
+    private var visibilityToggle: ImageView? = null
+    private var switchTrack: SwitchCompat? = null
+    private var lockSwitch: SwitchCompat? = null
+    private var doubleTapSwitch: SwitchCompat? = null
+    private var showAppUsageView: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,18 +67,72 @@ class SettingsActivity : AppCompatActivity() {
 
         backButton.setOnClickListener {
             finish()
-            overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+        }
+
+        notificationLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (PermissionUtils.hasNotificationPermission(this)) {
+                SharedPreferencesManager.setSwitchTrackEnabled(this, true)
+                switchTrack?.isChecked = true
+                val intentTimer = Intent(this, SpeedMonitorService::class.java)
+                startForegroundService(intentTimer)
+            } else {
+                SharedPreferencesManager.setSwitchTrackEnabled(this, false)
+                switchTrack?.isChecked = false
+                val intentTimer = Intent(this, SpeedMonitorService::class.java)
+                stopService(intentTimer)
+                Toast.makeText(
+                    this,
+                    "Please grant permission to show internet speed",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
+        usageStatsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (PermissionUtils.hasUsageStatsPermission(this)) {
+                SharedPreferencesManager.setVisibilityToggleEnabled(this, true)
+                visibilityToggle?.setImageResource(R.drawable.visibility_off_24px)
+            } else {
+                SharedPreferencesManager.setVisibilityToggleEnabled(this, false)
+                visibilityToggle?.setImageResource(R.drawable.visibility_24px)
+                Toast.makeText(
+                    this,
+                    "Please grant permission to show app usage",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            recreate()
+        }
+
+        accessibilityLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (AppAccessibilityService.isAccessibilityServiceEnabled()) {
+                SharedPreferencesManager.setSwipeToLockEnabled(this, true)
+                SharedPreferencesManager.setDoubleTapToLockEnabled(this, true)
+                lockSwitch?.isChecked = true
+                doubleTapSwitch?.isChecked = true
+            } else {
+                SharedPreferencesManager.setSwipeToLockEnabled(this, false)
+                SharedPreferencesManager.setDoubleTapToLockEnabled(this, false)
+                lockSwitch?.isChecked = false
+                doubleTapSwitch?.isChecked = false
+                Toast.makeText(
+                    this,
+                    "Please grant permission to lock the phone",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
 
         gestureDetector = GestureDetector(this, SwipeBackGestureListener())
 
-        val listView: ListView = findViewById(R.id.settingsListView)
+        listView = findViewById(R.id.settingsListView)
         val options = listOf(
             "In-App timer reminder",
             "Change color theme",
             "Internet Speed Meter",
             "Gestures",
             "Change launcher",
+            "Permission Stats",
             "Device settings",
             "Digital Wellbeing",
             "Version"
@@ -64,24 +140,52 @@ class SettingsActivity : AppCompatActivity() {
         val adapter = object : ArrayAdapter<String>(
             this,
             R.layout.item_settings_option,
-            R.id.settingOptionText,
+            R.id.settingsOptionText,
             options
         ) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                if (position == options.size - 2 && PermissionUtils.hasUsageStatsPermission(this@SettingsActivity)) {
-                    // Inflate your custom layout for the last item
-                    appUsageView = LayoutInflater.from(context)
-                        .inflate(R.layout.app_usage_layout, parent, false)
+                if (position == options.size - 2) {
+                    appUsageView = LayoutInflater.from(context).inflate(R.layout.app_usage_layout, parent, false)
+                    val visibleLayout: ConstraintLayout = appUsageView.findViewById(R.id.visibleLayout)
+                    visibilityToggle = appUsageView.findViewById(R.id.visibilityToggle)
+                    visibleLayout.visibility = View.GONE
 
-                    appUsageView.visibility = View.GONE
-                    populateAppUsageOption(appUsageView)
-                    appUsageView.visibility = View.VISIBLE
+                    if (!PermissionUtils.hasUsageStatsPermission(context)) {
+                        SharedPreferencesManager.setVisibilityToggleEnabled(context, false)
+                    }
 
+                    showAppUsageView = SharedPreferencesManager.isVisibilityToggleEnabled(context)
+
+                    visibilityToggle?.setOnClickListener {
+                        if (!PermissionUtils.hasUsageStatsPermission(context)) {
+                            val intent = Intent().apply {
+                                action = Settings.ACTION_USAGE_ACCESS_SETTINGS
+                                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                            }
+                            usageStatsLauncher.launch(intent)
+                        } else {
+                            showAppUsageView = !showAppUsageView
+                            SharedPreferencesManager.setVisibilityToggleEnabled(context, showAppUsageView)
+                        }
+                        notifyDataSetChanged()
+                    }
+
+                    if (showAppUsageView) {
+                        populateAppUsageOption(appUsageView)
+
+                        appUsageView.findViewById<TextView>(R.id.totalScreenTimeToday).text = "Total screen time today:"
+                        visibilityToggle?.setImageResource(R.drawable.visibility_off_24px)
+                        visibleLayout.visibility = View.VISIBLE
+                    } else {
+                        appUsageView.findViewById<TextView>(R.id.totalScreenTimeToday).text = options[position]
+                        visibilityToggle?.setImageResource(R.drawable.visibility_24px)
+                        visibleLayout.visibility = View.GONE
+                    }
                     return appUsageView
                 } else {
                     val view = LayoutInflater.from(context)
                         .inflate(R.layout.item_settings_option, parent, false)
-                    view.findViewById<TextView>(R.id.settingOptionText)?.text = options[position]
+                    view.findViewById<TextView>(R.id.settingsOptionText)?.text = options[position]
                     return view
                 }
             }
@@ -104,8 +208,9 @@ class SettingsActivity : AppCompatActivity() {
                 2 -> showInternetStatsDialog()
                 3 -> showGesturesDialog()
                 4 -> startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
-                5 -> startActivity(Intent(Settings.ACTION_SETTINGS))
-                6 -> try {
+                5 -> startActivity(Intent(this, PermissionsActivity::class.java))
+                6 -> startActivity(Intent(Settings.ACTION_SETTINGS))
+                7 -> try {
                     val intent = Intent()
                     intent.setClassName(
                         "com.samsung.android.forest",
@@ -117,13 +222,11 @@ class SettingsActivity : AppCompatActivity() {
                         .show()
                 }
 
-                7 -> snackBar.show()
+                8 -> snackBar.show()
 
                 else -> {
                     Toast.makeText(this, "Something's wrong!", Toast.LENGTH_SHORT).show()
                 }
-            }.also {
-                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
             }
         }
     }
@@ -334,31 +437,41 @@ class SettingsActivity : AppCompatActivity() {
             .setCancelable(true)
             .create()
 
-        val switchTrack = dialogView.findViewById<SwitchCompat>(R.id.switchTrack)
+        switchTrack = dialogView.findViewById(R.id.switchTrack)
 
-        if (PermissionUtils.hasNotificationPermission(this)) {
-            switchTrack.isChecked = SharedPreferencesManager.isSwitchTrackEnabled(this)
-        } else {
+        if (!PermissionUtils.hasNotificationPermission(this)) {
             SharedPreferencesManager.setSwitchTrackEnabled(this, false)
-            switchTrack.isChecked = SharedPreferencesManager.isSwitchTrackEnabled(this)
         }
+
+        switchTrack?.isChecked = SharedPreferencesManager.isSwitchTrackEnabled(this)
 
         populateUsageTable(dialogView)
 
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        switchTrack.setOnCheckedChangeListener { _, isChecked ->
+
+        switchTrack?.setOnCheckedChangeListener { _, isChecked ->
             SharedPreferencesManager.setSwitchTrackEnabled(this, isChecked)
             if (isChecked) {
                 if (!PermissionUtils.hasNotificationPermission(this)) {
-                    PermissionUtils.promptNotificationSettings(this)
+                    val intent = Intent().apply {
+                        action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    }
+                    notificationLauncher.launch(intent)
                 } else {
+                    SharedPreferencesManager.setSwitchTrackEnabled(this, true)
                     val intentTimer = Intent(this, SpeedMonitorService::class.java)
                     startForegroundService(intentTimer)
                 }
             } else {
+                SharedPreferencesManager.setSwitchTrackEnabled(this, false)
                 val intentTimer = Intent(this, SpeedMonitorService::class.java)
                 stopService(intentTimer)
             }
+        }
+
+        dialog.setOnDismissListener {
+            switchTrack = null
         }
 
         dialog.show()
@@ -448,39 +561,20 @@ class SettingsActivity : AppCompatActivity() {
             .setCancelable(true)
             .create()
 
-        val lockSwitch = dialogView.findViewById<SwitchCompat>(R.id.lockSwitch)
         val settingsSwitch = dialogView.findViewById<SwitchCompat>(R.id.settingsSwitch)
-        val doubleTapSwitch = dialogView.findViewById<SwitchCompat>(R.id.doubleTapSwitch)
+        lockSwitch = dialogView.findViewById(R.id.lockSwitch)
+        doubleTapSwitch = dialogView.findViewById(R.id.doubleTapSwitch)
 
         if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
             SharedPreferencesManager.setSwipeToLockEnabled(this, false)
             SharedPreferencesManager.setDoubleTapToLockEnabled(this, false)
         }
 
-        lockSwitch.isChecked = SharedPreferencesManager.isSwipeToLockEnabled(this)
+        lockSwitch?.isChecked = SharedPreferencesManager.isSwipeToLockEnabled(this)
+        doubleTapSwitch?.isChecked = SharedPreferencesManager.isDoubleTapToLockEnabled(this)
         settingsSwitch.isChecked = SharedPreferencesManager.isSwipeToSettingsEnabled(this)
-        doubleTapSwitch.isChecked = SharedPreferencesManager.isDoubleTapToLockEnabled(this)
 
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-
-        lockSwitch.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
-                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                } else {
-                    SharedPreferencesManager.setSwipeToLockEnabled(this, true)
-                    Toast.makeText(
-                        this,
-                        "'Swipe right to lock phone' is enabled",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            } else {
-                SharedPreferencesManager.setSwipeToLockEnabled(this, false)
-                Toast.makeText(this, "'Swipe right to lock phone' is disabled", Toast.LENGTH_SHORT)
-                    .show()
-            }
-        }
 
         settingsSwitch.setOnCheckedChangeListener { _, isChecked ->
             SharedPreferencesManager.setSwipeToSettingsEnabled(this, isChecked)
@@ -496,12 +590,41 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        doubleTapSwitch.setOnCheckedChangeListener { _, isChecked ->
+        lockSwitch?.setOnCheckedChangeListener { _, isChecked ->
+            SharedPreferencesManager.setSwipeToLockEnabled(this, isChecked)
+            if (isChecked) {
+                if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
+                    val intent = Intent().apply {
+                        action = Settings.ACTION_ACCESSIBILITY_SETTINGS
+                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    }
+                    accessibilityLauncher.launch(intent)
+                } else {
+                    SharedPreferencesManager.setSwipeToLockEnabled(this, true)
+                    Toast.makeText(
+                        this,
+                        "'Swipe right to lock phone' is enabled",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+                SharedPreferencesManager.setSwipeToLockEnabled(this, false)
+                Toast.makeText(this, "'Swipe right to lock phone' is disabled", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        }
+
+        doubleTapSwitch?.setOnCheckedChangeListener { _, isChecked ->
             SharedPreferencesManager.setDoubleTapToLockEnabled(this, isChecked)
             if (isChecked) {
                 if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
-                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    val intent = Intent().apply {
+                        action = Settings.ACTION_ACCESSIBILITY_SETTINGS
+                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    }
+                    accessibilityLauncher.launch(intent)
                 } else {
+                    SharedPreferencesManager.setDoubleTapToLockEnabled(this, true)
                     Toast.makeText(
                         this,
                         "'Double tap to lock phone' is enabled",
@@ -509,9 +632,15 @@ class SettingsActivity : AppCompatActivity() {
                     ).show()
                 }
             } else {
+                SharedPreferencesManager.setDoubleTapToLockEnabled(this, false)
                 Toast.makeText(this, "'Double tap to lock phone' is disabled", Toast.LENGTH_SHORT)
                     .show()
             }
+        }
+
+        dialog.setOnDismissListener {
+            lockSwitch = null
+            doubleTapSwitch = null
         }
 
         dialog.show()
@@ -544,10 +673,7 @@ class SettingsActivity : AppCompatActivity() {
             ) {
                 if (diffX > 0 && startX < edgeSwipeThreshold) {
                     finish()
-                    overridePendingTransition(
-                        android.R.anim.slide_in_left,
-                        android.R.anim.slide_out_right
-                    )
+//                    overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right)
                     return true
                 }
             }

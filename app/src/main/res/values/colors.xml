@@ -11,4 +11,6 @@
     <color name="new_app_indicator">#FF666666</color>
     <color name="textColorPrimary">#000000</color> <!-- Black text for light theme -->
     <color name="backgroundColor">#FFFFFF</color>  <!-- Optional -->
+    <color name="enable">#008800</color>
+    <color name="disable">#880000</color>
 </resources>

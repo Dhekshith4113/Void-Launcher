@@ -42,13 +42,14 @@
 
         <activity
             android:name=".MainActivity"
+            android:excludeFromRecents="true"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
-            android:excludeFromRecents="true"
             android:theme="@style/Theme.Void">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -58,18 +59,20 @@
         <activity
             android:name=".SettingsActivity"
             android:excludeFromRecents="true"
-            android:taskAffinity=""/>
+            android:taskAffinity="" />
 
-        <activity android:name=".DefaultLauncherActivity"/>
-        <activity android:name=".InAppTimerReminderActivity"/>
+        <activity android:name=".DefaultLauncherActivity" />
+        <activity android:name=".PermissionsActivity" />
+        <activity android:name=".InAppTimerReminderActivity" />
 
-        <activity android:name=".TimerPromptActivity"
-            android:theme="@style/CustomDialogTheme"
+        <activity
+            android:name=".TimerPromptActivity"
+            android:excludeFromRecents="true"
             android:exported="false"
+            android:finishOnTaskLaunch="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
-            android:excludeFromRecents="true"
-            android:finishOnTaskLaunch="true"/>
+            android:theme="@style/CustomDialogTheme" />
 
         <service
             android:name=".SpeedMonitorService"
@@ -78,8 +81,8 @@
 
         <service
             android:name="com.example.voidui.AppAccessibilityService"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true">
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
@@ -90,8 +93,8 @@
 
         <service
             android:name=".TimerMonitorService"
-            android:foregroundServiceType="specialUse|mediaPlayback|dataSync"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse|mediaPlayback|dataSync" />
 
     </application>
 

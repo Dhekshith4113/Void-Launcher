@@ -12,7 +12,9 @@ object SharedPreferencesManager {
     private const val KEY_SWIPE_TO_SETTINGS_ENABLED = "swipe_to_settings_enabled"
     private const val KEY_DOUBLE_TAP_TO_LOCK_ENABLED = "double_tap_to_lock_enabled"
     private const val KEY_IS_ONE_MIN_TOAST_SHOWN = "one_min_toast_shown"
+    private const val KEY_IS_VISIBILITY_TOGGLE_ENABLED = "visibility_toggle_enabled"
     private const val KEY_APP_TIMER_PREFIX = "app_timer_"
+    private const val KEY_IS_HOME_LAUNCHER = "is_home_launcher"
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -80,5 +82,21 @@ object SharedPreferencesManager {
 
     fun setOneMinToastShown(context: Context, appName: String, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_IS_ONE_MIN_TOAST_SHOWN + appName, enabled).apply()
+    }
+
+    fun isVisibilityToggleEnabled(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_IS_VISIBILITY_TOGGLE_ENABLED, false)
+    }
+
+    fun setVisibilityToggleEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_IS_VISIBILITY_TOGGLE_ENABLED, enabled).apply()
+    }
+
+    fun isHomeLauncher(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_IS_HOME_LAUNCHER, false)
+    }
+
+    fun setHomeLauncher(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_IS_HOME_LAUNCHER, enabled).apply()
     }
 }
