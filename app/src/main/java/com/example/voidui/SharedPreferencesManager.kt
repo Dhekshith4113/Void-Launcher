@@ -15,6 +15,7 @@ object SharedPreferencesManager {
     private const val KEY_IS_VISIBILITY_TOGGLE_ENABLED = "visibility_toggle_enabled"
     private const val KEY_APP_TIMER_PREFIX = "app_timer_"
     private const val KEY_IS_HOME_LAUNCHER = "is_home_launcher"
+    private const val KEY_IS_APP_ICON_TOGGLE_ENABLED = "is_app_icon_toggle_enabled"
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -98,5 +99,13 @@ object SharedPreferencesManager {
 
     fun setHomeLauncher(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_IS_HOME_LAUNCHER, enabled).apply()
+    }
+
+    fun isAppIconToggleEnabled(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_IS_APP_ICON_TOGGLE_ENABLED, false)
+    }
+
+    fun setAppIconToggleEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_IS_APP_ICON_TOGGLE_ENABLED, enabled).apply()
     }
 }

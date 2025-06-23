@@ -54,15 +54,11 @@ class MainActivity : AppCompatActivity() {
     private var toastShownThisDrag = false
     private var shouldMoveIndicator = true
 
-    private var lastAnimationUpdateTime = 0L
-    private val animationThrottleMs = 16L // ~60 FPS
-
     val drawerSize = 4
 
     private val bubbleBackground by lazy {
         ContextCompat.getDrawable(this, R.drawable.bubble_background)
     }
-    private val Int.dp: Int get() = (this * Resources.getSystem().displayMetrics.density).toInt()
 
     @SuppressLint("ClickableViewAccessibility")
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -79,12 +75,14 @@ class MainActivity : AppCompatActivity() {
             prefsInstalledApps.edit().putBoolean("first_time", true).apply()
         }
 
-        if (!isDefaultLauncher(this)) {
-            finish()
-            startActivity(Intent(this, DefaultLauncherActivity::class.java))
-        }
+//        if (!isDefaultLauncher(this)) {
+//            finish()
+//            startActivity(Intent(this, DefaultLauncherActivity::class.java))
+//        }
 
         gestureDetector = GestureDetector(this, SwipeGestureListener())
+
+        SharedPreferencesManager.setAppIconToggleEnabled(this, true)
 
         recyclerView = findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -115,426 +113,20 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val alphabetScroller = findViewById<LinearLayout>(R.id.alphabetScroller)
-        val usedAlphabets: List<Char> = listAdapter.getApps()
-            .map { it.loadLabel(packageManager).first().uppercaseChar() }
-            .distinct()
-            .sorted()
-        alphabetScroller.removeAllViews()
-        usedAlphabets.forEach { letter ->
-            val textView = TextView(this).apply {
-                text = letter.toString()
-                textSize = 14f
-                setTextColor(getColor(R.color.textColorPrimary))
-                gravity = Gravity.CENTER  // center the text
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,  // wrap content so background isn't stretched
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    setMargins(4.dp, 2.dp, 4.dp, 2.dp)
-                    gravity = Gravity.END  // optional, if you want to center in parent
-                }
-                setPadding(4.dp, 2.dp, 4.dp, 2.dp)  // optional for spacing inside the bubble
-            }
-            alphabetScroller.addView(textView)
-        }
-
+        val scroller = findViewById<AlphabetScrollerView>(R.id.alphabetScroller)
         val apps = listAdapter.getApps()
+        val usedAlphabets = apps.map { it.loadLabel(packageManager).first().uppercaseChar() }.distinct().sorted()
         val indexMap = getAlphabetIndexMap(apps)
         val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-        var lastIndex = -1 // Keep this outside the listener (class-level or view-level)
 
-//////////////////////////////// STATIC SCROLL BAR WITH AN INDICATOR ////////////////////////////////
-//
-//        alphabetScroller.setOnTouchListener { _, event ->
-//            when (event.action) {
-//                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-//                    val itemHeight = alphabetScroller.height / usedAlphabets.size
-//                    val index = (event.y / itemHeight).toInt().coerceIn(0, usedAlphabets.size - 1)
-//                    if (index != lastIndex) {
-//                        val selectedChar = usedAlphabets.elementAt(index)
-//
-//                        for (i in 0 until alphabetScroller.childCount) {
-//                            val child = alphabetScroller.getChildAt(i)
-//                            child.translationX = 0f
-//                            child.background = null
-//                        }
-//
-//                        indexMap[selectedChar]?.let {
-//                            layoutManager.scrollToPositionWithOffset(
-//                                it,
-//                                0
-//                            )
-//                        }
-//
-//                        alphabetScroller.getChildAt(index).translationX = -150f
-//                        alphabetScroller.getChildAt(index).background = bubbleBackground
-//                    }
-//                    lastIndex = index
-//                }
-//
-//                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-//                    for (i in 0 until alphabetScroller.childCount) {
-//                        val child = alphabetScroller.getChildAt(i)
-//                        child.translationX = 0f
-//                        child.background = null
-//                    }
-//                    lastIndex = -1
-//                }
-//            }
-//            true
-//        }
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//////////////////////////// STATIC ANIMATED SCROLL BAR WITH AN INDICATOR ///////////////////////////
-
-        alphabetScroller.setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                    val itemHeight = alphabetScroller.height / usedAlphabets.size
-                    val index = (event.y / itemHeight).toInt().coerceIn(0, usedAlphabets.size - 1)
-                    if (index != lastIndex) {
-                        val selectedChar = usedAlphabets.elementAt(index)
-                        indexMap[selectedChar]?.let {
-                            layoutManager.scrollToPositionWithOffset(
-                                it,
-                                0
-                            )
-                        }
-
-                        val sigma = 1.5f
-
-                        for (i in 0 until alphabetScroller.childCount) {
-                            val child = alphabetScroller.getChildAt(i)
-                            val offset = i - index
-
-                            val distance = offset.toFloat()
-                            val curveFactor = exp(-(distance * distance) / (2 * sigma * sigma))
-
-                            val scale = 0.85f + (0.15f * curveFactor)
-                            val alpha = 0.4f + (0.6f * curveFactor)
-
-                            ViewCompat.animate(child).cancel()
-                            ViewCompat.animate(child)
-                                .scaleX(scale)
-                                .scaleY(scale)
-                                .alpha(alpha)
-                                .setDuration(75)
-                                .setInterpolator(LinearInterpolator())
-                                .withLayer()
-                                .start()
-
-                            if (offset == 0) {
-                                child.translationX = -150f
-                                child.background = bubbleBackground
-                            } else {
-                                child.translationX = 0f
-                                child.background = null
-                            }
-                        }
-                    }
-                    lastIndex = index
-                }
-
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    for (i in 0 until alphabetScroller.childCount) {
-                        val child = alphabetScroller.getChildAt(i)
-                        ViewCompat.animate(child).cancel()
-                        ViewCompat.animate(child)
-                            .translationX(0f)
-                            .scaleX(1f)
-                            .scaleY(1f)
-                            .alpha(1f)
-                            .setDuration(75)
-                            .setInterpolator(OvershootInterpolator())
-                            .withLayer()
-                            .start()
-                        child.background = null
-                    }
-                    lastIndex = -1
-                }
-            }
-            true
+        scroller.setup(usedAlphabets, indexMap, layoutManager, bubbleBackground)
+        scroller.enableFloatingBubble(findViewById(R.id.layoutMainActivity)) // your FrameLayout root
+        scroller.onLetterSelected = { letter ->
+            listAdapter.setHighlightedInitial(letter)
         }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/////////////////////////// DYNAMIC BENDING SCROLL BAR WITH AN INDICATOR ////////////////////////////
-//
-//        alphabetScroller.setOnTouchListener { _, event ->
-//            when (event.action) {
-//                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-//                    val itemHeight = alphabetScroller.height / usedAlphabets.size
-//                    val index = (event.y / itemHeight).toInt().coerceIn(0, usedAlphabets.size - 1)
-//
-//                    if (index != lastIndex) {
-//                        val selectedChar = usedAlphabets.elementAt(index)
-//                        indexMap[selectedChar]?.let { layoutManager.scrollToPositionWithOffset(it, 0) }
-//
-//                        // Reset all views
-//                        for (i in 0 until alphabetScroller.childCount) {
-//                            val child = alphabetScroller.getChildAt(i)
-//                            child.translationX = 0f
-//                            child.background = null
-//                        }
-//
-//                        // Apply bend effect ±3 items
-//                        for (offset in -4..4) {
-//                            val childIndex = index + offset
-//                            if (childIndex in 0 until alphabetScroller.childCount) {
-//                                val child = alphabetScroller.getChildAt(childIndex)
-//                                val translation = when (offset) {
-//                                    0 -> -150f
-//                                    -1, 1 -> -140f
-//                                    -2, 2 -> -75f
-//                                    -3, 3 -> -20f
-//                                    else -> 0f
-//                                }
-//                                child.translationX = translation
-//
-//                                if (offset == 0) {
-//                                    child.background = ContextCompat.getDrawable(this, R.drawable.bubble_background)
-//                                }
-//                            }
-//                        }
-//
-//                        lastIndex = index
-//                    }
-//                }
-//
-//                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-//                    // Reset all on touch release
-//                    for (i in 0 until alphabetScroller.childCount) {
-//                        val child = alphabetScroller.getChildAt(i)
-//                        child.translationX = 0f
-//                        child.background = null
-//                    }
-//                    lastIndex = -1
-//                }
-//            }
-//            true
-//        }
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/////////////////////// DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR ///////////////////////
-//
-//        alphabetScroller.setOnTouchListener { _, event ->
-//            when (event.action) {
-//                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-//                    val itemHeight = alphabetScroller.height / usedAlphabets.size
-//                    val index = (event.y / itemHeight).toInt().coerceIn(0, usedAlphabets.size - 1)
-//
-//                    if (index != lastIndex) {
-//                        val selectedChar = usedAlphabets.elementAt(index)
-//                        indexMap[selectedChar]?.let {
-//                            layoutManager.scrollToPositionWithOffset(it, 0)
-//                        }
-//
-//                        // Reset all views with animation
-//                        for (i in 0 until alphabetScroller.childCount) {
-//                            val child = alphabetScroller.getChildAt(i)
-//                            child.animate()
-//                                .translationX(0f)
-//                                .setDuration(75)
-//                                .start()
-//                            child.background = null
-//                        }
-//
-//                        // Apply bend effect ±4 items with smooth animation
-//                        for (offset in -4..4) {
-//                            val childIndex = index + offset
-//                            if (childIndex in 0 until alphabetScroller.childCount) {
-//                                val child = alphabetScroller.getChildAt(childIndex)
-//                                val translation = when (offset) {
-//                                    0 -> -150f
-//                                    -1, 1 -> -140f
-//                                    -2, 2 -> -75f
-//                                    -3, 3 -> -20f
-//                                    else -> 0f
-//                                }
-//                                child.animate()
-//                                    .translationX(translation)
-//                                    .setDuration(75)
-//                                    .start()
-//
-//                                if (offset == 0) {
-//                                    child.background = ContextCompat.getDrawable(this, R.drawable.bubble_background)
-//                                }
-//                            }
-//                        }
-//
-//                        lastIndex = index
-//                    }
-//                }
-//
-//                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-//                    // Reset all on touch release with animation
-//                    for (i in 0 until alphabetScroller.childCount) {
-//                        val child = alphabetScroller.getChildAt(i)
-//                        child.animate()
-//                            .translationX(0f)
-//                            .setDuration(75)
-//                            .start()
-//                        child.background = null
-//                    }
-//                    lastIndex = -1
-//                }
-//            }
-//            true
-//        }
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/////////////////////// DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR ///////////////////////
-////////////////////////////////// (DIFFERENT METHOD FOR BENDING) ///////////////////////////////////
-//
-//        alphabetScroller.setOnTouchListener { _, event ->
-//            when (event.action) {
-//                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-//                    val itemHeight = alphabetScroller.height / usedAlphabets.size
-//                    val index = (event.y / itemHeight).toInt().coerceIn(0, usedAlphabets.size - 1)
-//
-//                    if (index != lastIndex) {
-//                        val selectedChar = usedAlphabets.elementAt(index)
-//                        indexMap[selectedChar]?.let {
-//                            layoutManager.scrollToPositionWithOffset(it, 0)
-//                        }
-//
-//                        // Reset all views with animation
-//                        for (i in 0 until alphabetScroller.childCount) {
-//                            val child = alphabetScroller.getChildAt(i)
-//                            child.animate()
-//                                .translationX(0f)
-//                                .setDuration(75)
-//                                .start()
-//                            child.background = null
-//                        }
-//
-//                        val amplitude = 150f
-//                        val sigma = 1.5f
-//
-//                        for (i in 0 until alphabetScroller.childCount) {
-//                            val offset = i - index
-//                            if (abs(offset) <= 4) {
-//                                val child = alphabetScroller.getChildAt(i)
-//
-//                                // Bell curve translation based on distance from touch
-//                                val distance = offset.toFloat()
-//                                val translation = -amplitude * exp(-((distance * distance) / (2 * sigma * sigma)))
-//
-//                                child.animate()
-//                                    .translationX(translation)
-//                                    .setDuration(75)
-//                                    .start()
-//
-//                                if (offset == 0) {
-//                                    child.background = ContextCompat.getDrawable(this, R.drawable.bubble_background)
-//                                }
-//                            }
-//                        }
-//
-//                        lastIndex = index
-//                    }
-//                }
-//
-//                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-//                    // Reset all on touch release with animation
-//                    for (i in 0 until alphabetScroller.childCount) {
-//                        val child = alphabetScroller.getChildAt(i)
-//                        child.animate()
-//                            .translationX(0f)
-//                            .setDuration(75)
-//                            .start()
-//                        child.background = null
-//                    }
-//                    lastIndex = -1
-//                }
-//            }
-//            true
-//        }
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/////////////////////// DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR ///////////////////////
-/////////////////////// (DIFFERENT METHOD FOR BENDING AND BETTER PERFORMANCE) ///////////////////////
-//
-//        alphabetScroller.setOnTouchListener { _, event ->
-//            when (event.action) {
-//                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-//                    val now = System.currentTimeMillis()
-//                    if (now - lastAnimationUpdateTime < animationThrottleMs) return@setOnTouchListener true
-//                    lastAnimationUpdateTime = now
-//
-//                    val itemHeight = alphabetScroller.height / usedAlphabets.size
-//                    val index = (event.y / itemHeight).toInt().coerceIn(0, usedAlphabets.size - 1)
-//
-//                    if (index != lastIndex) {
-//                        val selectedChar = usedAlphabets.elementAt(index)
-//                        indexMap[selectedChar]?.let {
-//                            layoutManager.scrollToPositionWithOffset(it, 0)
-//                        }
-//
-//                        val amplitude = 150f
-//                        val sigma = 1.5f
-//
-//                        for (i in 0 until alphabetScroller.childCount) {
-//                            val child = alphabetScroller.getChildAt(i)
-//                            val offset = i - index
-//
-//                            val distance = offset.toFloat()
-//                            val curveFactor = exp(-(distance * distance) / (2 * sigma * sigma))
-//
-//                            val translationX = -amplitude * curveFactor
-//                            val scale = 0.85f + (0.15f * curveFactor)
-//                            val alpha = 0.4f + (0.6f * curveFactor)
-//
-//                            ViewCompat.animate(child).cancel()
-//                            ViewCompat.animate(child)
-//                                .translationX(translationX)
-//                                .scaleX(scale)
-//                                .scaleY(scale)
-//                                .alpha(alpha)
-//                                .setDuration(75)
-//                                .setInterpolator(LinearInterpolator())
-//                                .withLayer()
-//                                .start()
-//
-//                            child.background = if (offset == 0) {
-//                                bubbleBackground
-//                            } else {
-//                                null
-//                            }
-//                        }
-//
-//                        lastIndex = index
-//                    }
-//                }
-//
-//                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-//                    for (i in 0 until alphabetScroller.childCount) {
-//                        val child = alphabetScroller.getChildAt(i)
-//                        ViewCompat.animate(child).cancel()
-//                        ViewCompat.animate(child)
-//                            .translationX(0f)
-//                            .scaleX(1f)
-//                            .scaleY(1f)
-//                            .alpha(1f)
-//                            .setDuration(75)
-//                            .setInterpolator(LinearInterpolator())
-//                            .withLayer()
-//                            .start()
-//                        child.background = null
-//                    }
-//
-//                    lastIndex = -1
-//                }
-//            }
-//            true
-//        }
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////////
+//        val fastScroll = findViewById<FastScroll>(R.id.fastScroll)
+//        fastScroll.attachToRecyclerView(recyclerView)
 
         drawerRecyclerView = findViewById(R.id.appDrawerRecyclerView)
         drawerAdapter = AppDrawerAdapter(
@@ -737,7 +329,6 @@ class MainActivity : AppCompatActivity() {
         val settingsButton = findViewById<ImageButton>(R.id.settingsButton)
         settingsButton.setOnClickListener {
             openSettings()
-//            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
 
     }
@@ -752,10 +343,10 @@ class MainActivity : AppCompatActivity() {
             drawerAdapter.updateData(loadDrawerApps().toMutableList())
             needRefresh = false
         }
-        if (!isDefaultLauncher(this)) {
-            finish()
-            startActivity(Intent(this, DefaultLauncherActivity::class.java))
-        }
+//        if (!isDefaultLauncher(this)) {
+//            finish()
+//            startActivity(Intent(this, DefaultLauncherActivity::class.java))
+//        }
     }
 
     override fun onRequestPermissionsResult(
@@ -1109,7 +700,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun openSettings() {
         startActivity(Intent(this, SettingsActivity::class.java))
-//        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
     }
 
 }

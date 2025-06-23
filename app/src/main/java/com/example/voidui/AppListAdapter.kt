@@ -33,9 +33,11 @@ class AppListAdapter(
 ) : RecyclerView.Adapter<AppListAdapter.ViewHolder>() {
 
     private var newAppPackages: Set<String> = emptySet()
+    private var highlightedInitial: Char? = null
 
     @SuppressLint("ClickableViewAccessibility")
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val icon: ImageView? = itemView.findViewById(R.id.appIcon)
         val name: TextView = itemView.findViewById(R.id.appName)
         val newAppName: TextView = itemView.findViewById(R.id.newText)
 
@@ -79,7 +81,15 @@ class AppListAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val app = apps[position]
-        holder.name.text = app.loadLabel(pm)
+        val appLabel = app.loadLabel(pm).toString()
+        val shouldDim = highlightedInitial != null && !appLabel.startsWith(highlightedInitial!!, ignoreCase = true)
+
+        holder.itemView.alpha = if (shouldDim) 0.2f else 1f
+        holder.icon?.setBackgroundResource(0)
+        holder.icon?.setImageDrawable(app.loadIcon(pm))
+        holder.name.text = appLabel
+
+        if (SharedPreferencesManager.isAppIconToggleEnabled(context)) holder.icon?.visibility = View.VISIBLE else holder.icon?.visibility = View.GONE
 
         if (newAppPackages.contains(app.packageName)) {
             holder.newAppName.visibility = View.VISIBLE
@@ -159,6 +169,11 @@ class AppListAdapter(
     fun getApps(): List<ApplicationInfo> {
         apps.sortBy { it.loadLabel(pm).toString().lowercase() }
         return apps.toList()
+    }
+
+    fun setHighlightedInitial(letter: Char?) {
+        highlightedInitial = letter
+        notifyDataSetChanged()
     }
 
 }
