@@ -12,11 +12,12 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <ImageView
+        <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/appIcon"
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:layout_marginEnd="8dp"
+            android:scaleType="centerInside"
             android:contentDescription="App Icon"
             android:layout_marginVertical="10dp"
             android:visibility="gone"/>

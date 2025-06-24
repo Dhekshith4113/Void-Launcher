@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="18dp"
         android:contentDescription="App Icon"
-        android:src="@mipmap/ic_launcher_foreground"/>
+        android:src="@mipmap/ic_launcher_monochrome"/>
 
     <Button
         android:id="@+id/btnSet"

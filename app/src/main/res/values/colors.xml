@@ -13,4 +13,9 @@
     <color name="backgroundColor">#FFFFFF</color>  <!-- Optional -->
     <color name="enable">#008800</color>
     <color name="disable">#880000</color>
+
+    <!-- Themed icon colors - adjust these to match your launcher theme -->
+    <color name="themed_icon_background">#80808080</color> <!-- Semi-transparent white -->
+    <color name="themed_icon_foreground">#FFFFFFFF</color> <!-- White foreground -->
+
 </resources>

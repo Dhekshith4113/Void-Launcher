@@ -6,4 +6,9 @@
     <color name="backgroundColor">#000000</color>
     <color name="enable">#006600</color>
     <color name="disable">#660000</color>
+
+    <!-- Alternative color scheme for dark themes -->
+    <color name="themed_icon_background">#FF808080</color> <!-- Semi-transparent gray -->
+    <color name="themed_icon_foreground">#FF000000</color> <!-- Black foreground -->
+
 </resources>

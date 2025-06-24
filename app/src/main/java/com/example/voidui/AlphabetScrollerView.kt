@@ -32,12 +32,6 @@ class AlphabetScrollerView @JvmOverloads constructor(
     private var bubbleBackground: Drawable? = null
     private var layoutManager: LinearLayoutManager? = null
 
-    private var lastAnimationUpdateTime = 0L
-    private val animationThrottleMs = 16L // ~60 FPS
-
-    private var floatingBubble: TextView? = null
-    private var rootOverlay: ViewGroup? = null
-
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER
@@ -81,10 +75,6 @@ class AlphabetScrollerView @JvmOverloads constructor(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                val now = System.currentTimeMillis()
-                if (now - lastAnimationUpdateTime < animationThrottleMs) return true
-                lastAnimationUpdateTime = now
-
                 val itemHeight = height / usedAlphabets.size
                 val index = (event.y / itemHeight).toInt().coerceIn(0, usedAlphabets.size - 1)
                 val selectedChar = usedAlphabets[index]
@@ -99,19 +89,6 @@ class AlphabetScrollerView @JvmOverloads constructor(
 //                    newDynamicAnimatedBellCurveScroll(index) // DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR (BELL CURVE METHOD FOR BENDING AND BETTER PERFORMANCE)
                 }
                 lastIndex = index
-
-                floatingBubble?.let { bubble ->
-                    bubble.text = selectedChar.toString()
-                    bubble.visibility = View.VISIBLE
-
-                    val location = IntArray(2)
-                    getLocationOnScreen(location)
-                    val alphabetScrollerX = location[0]
-                    val bubbleX = alphabetScrollerX - bubble.width - 18.dp
-
-                    bubble.x = bubbleX.toFloat()
-                    bubble.y = event.rawY - bubble.height * 1.5f
-                }
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -123,7 +100,6 @@ class AlphabetScrollerView @JvmOverloads constructor(
 //                newDynamicAnimatedBellCurveScrollReset()  // DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR (BELL CURVE METHOD FOR BENDING AND BETTER PERFORMANCE)
                 lastIndex = -1
                 onLetterSelected?.invoke(null)
-                floatingBubble?.visibility = View.GONE
             }
         }
         return true
@@ -160,32 +136,22 @@ class AlphabetScrollerView @JvmOverloads constructor(
 
 //            val scale = 0.85f + (0.15f * curveFactor)
             val alpha = 0.4f + (0.6f * curveFactor)
-            child.alpha = alpha
-
-//            ViewCompat.animate(child).cancel()
-//            ViewCompat.animate(child)
+            ViewCompat.animate(child).cancel()
+            ViewCompat.animate(child)
 //                .scaleX(scale)
 //                .scaleY(scale)
-//                .alpha(alpha)
-//                .setDuration(75)
-//                .setInterpolator(LinearInterpolator())
-//                .withLayer()
-//                .start()
-
-//            if (offset == 0) {
-//                child.translationX = -150f
-//                child.background = bubbleBackground
-//            } else {
-//                child.translationX = 0f
-//                child.background = null
-//            }
+                .alpha(alpha)
+                .setDuration(75)
+                .setInterpolator(LinearInterpolator())
+                .withLayer()
+                .start()
 
             if (offset == 0) {
-                if (child.tag == null) child.tag = child.text
-                child.text = ""
+                child.translationX = -150f
+                child.background = bubbleBackground
             } else {
-                val originalText = child.tag as? CharSequence
-                if (originalText != null && child.text.isNullOrEmpty()) child.text = originalText
+                child.translationX = 0f
+                child.background = null
             }
         }
     }
@@ -195,21 +161,18 @@ class AlphabetScrollerView @JvmOverloads constructor(
             val child = getChildAt(i) as? TextView ?: continue
             child.alpha = 1f
 
-//            ViewCompat.animate(child).cancel()
-//            ViewCompat.animate(child)
+            ViewCompat.animate(child).cancel()
+            ViewCompat.animate(child)
 //                .scaleX(1f)
 //                .scaleY(1f)
-//                .alpha(1f)
-//                .translationX(0f)
-//                .setDuration(75)
-//                .setInterpolator(LinearInterpolator())
-//                .withLayer()
-//                .start()
+                .alpha(1f)
+                .translationX(0f)
+                .setDuration(75)
+                .setInterpolator(LinearInterpolator())
+                .withLayer()
+                .start()
 
-//            child.background = null
-
-            val originalText = child.tag as? CharSequence
-            if (originalText != null && child.text.isNullOrEmpty()) child.text = originalText
+            child.background = null
         }
     }
 
@@ -394,21 +357,21 @@ class AlphabetScrollerView @JvmOverloads constructor(
         }
     }
 
-    fun enableFloatingBubble(bubbleParent: ViewGroup) {
-        rootOverlay = bubbleParent
-        floatingBubble = TextView(context).apply {
-            layoutParams = LayoutParams(32.dp, 32.dp).apply {
-                gravity = Gravity.TOP or Gravity.START
-            }
-            background = AppCompatResources.getDrawable(context, R.drawable.bubble_background)
-            gravity = Gravity.CENTER
-            textSize = 14f
-            setTextColor(Color.WHITE)
-            visibility = View.GONE
-            elevation = 20f
-        }
-        rootOverlay?.addView(floatingBubble)
-    }
+//    fun enableFloatingBubble(bubbleParent: ViewGroup) {
+//        rootOverlay = bubbleParent
+//        floatingBubble = TextView(context).apply {
+//            layoutParams = LayoutParams(32.dp, 32.dp).apply {
+//                gravity = Gravity.TOP or Gravity.START
+//            }
+//            background = AppCompatResources.getDrawable(context, R.drawable.bubble_background)
+//            gravity = Gravity.CENTER
+//            textSize = 14f
+//            setTextColor(Color.WHITE)
+//            visibility = View.GONE
+//            elevation = 20f
+//        }
+//        rootOverlay?.addView(floatingBubble)
+//    }
 
     private val Int.dp: Int get() = (this * context.resources.displayMetrics.density).toInt()
 }

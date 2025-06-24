@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
-import android.content.res.Resources
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
@@ -20,27 +19,21 @@ import android.os.VibratorManager
 import android.util.Log
 import android.view.DragEvent
 import android.view.GestureDetector
-import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
 import android.view.ViewTreeObserver
-import android.view.animation.LinearInterpolator
-import android.view.animation.OvershootInterpolator
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlin.math.abs
-import kotlin.math.exp
 
 class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
@@ -82,10 +75,7 @@ class MainActivity : AppCompatActivity() {
 
         gestureDetector = GestureDetector(this, SwipeGestureListener())
 
-        SharedPreferencesManager.setAppIconToggleEnabled(this, true)
-
         recyclerView = findViewById(R.id.recyclerView)
-        recyclerView.layoutManager = LinearLayoutManager(this)
 
         listAdapter =
             AppListAdapter(this, loadListApps().toMutableList(), packageManager, refreshList = {
@@ -100,6 +90,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+        if (SharedPreferencesManager.isAppDrawerEnabled(this)) {
+            recyclerView.layoutManager = GridLayoutManager(this, 4)
+        } else {
+            recyclerView.layoutManager = LinearLayoutManager(this)
+        }
+
         recyclerView.adapter = listAdapter
 
         listAdapter.onAppDragStarted = { app ->
@@ -113,22 +109,29 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val scroller = findViewById<AlphabetScrollerView>(R.id.alphabetScroller)
-        val apps = listAdapter.getApps()
-        val usedAlphabets = apps.map { it.loadLabel(packageManager).first().uppercaseChar() }.distinct().sorted()
-        val indexMap = getAlphabetIndexMap(apps)
-        val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-
-        scroller.setup(usedAlphabets, indexMap, layoutManager, bubbleBackground)
-        scroller.enableFloatingBubble(findViewById(R.id.layoutMainActivity)) // your FrameLayout root
-        scroller.onLetterSelected = { letter ->
-            listAdapter.setHighlightedInitial(letter)
-        }
+//        val scroller = findViewById<AlphabetScrollerView>(R.id.alphabetScroller)
+//        val apps = listAdapter.getApps()
+//        val usedAlphabets = apps.map { it.loadLabel(packageManager).first().uppercaseChar() }.distinct().sorted()
+//        val indexMap = getAlphabetIndexMap(apps)
+//        val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+//
+//        scroller.visibility = View.VISIBLE
+//        scroller.setup(usedAlphabets, indexMap, layoutManager, bubbleBackground)
+//        scroller.onLetterSelected = { letter ->
+//            listAdapter.setHighlightedInitial(letter)
+//        }
 
 //        val fastScroll = findViewById<FastScroll>(R.id.fastScroll)
 //        fastScroll.attachToRecyclerView(recyclerView)
 
         drawerRecyclerView = findViewById(R.id.appDrawerRecyclerView)
+
+        drawerRecyclerView.visibility = if (SharedPreferencesManager.isMiniDrawerEnabled(this)) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+
         drawerAdapter = AppDrawerAdapter(
             this,
             packageManager,
@@ -333,6 +336,7 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onResume() {
         super.onResume()
         clearExpiredNewAppTags()
@@ -347,6 +351,11 @@ class MainActivity : AppCompatActivity() {
 //            finish()
 //            startActivity(Intent(this, DefaultLauncherActivity::class.java))
 //        }
+        if (SharedPreferencesManager.isRefreshViewEnabled(this)) {
+            finish()
+            startActivity(Intent(this, MainActivity::class.java))
+            SharedPreferencesManager.setRefreshViewEnabled(this, false)
+        }
     }
 
     override fun onRequestPermissionsResult(

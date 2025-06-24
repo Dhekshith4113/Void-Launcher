@@ -6,18 +6,8 @@
     android:id="@+id/layoutMainActivity"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_marginBottom="50dp"
     tools:context=".MainActivity">
-
-    <TextView
-        android:id="@+id/letterBubble"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:gravity="center"
-        android:background="@drawable/bubble_background"
-        android:textSize="14sp"
-        android:textColor="@android:color/white"
-        android:visibility="gone"
-        android:elevation="10dp" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -42,11 +32,11 @@
             android:layout_height="80dp"
             android:overScrollMode="never"
             android:scrollbars="none"
-            android:layout_marginBottom="50dp"
             android:background="@android:color/transparent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"/>
+            app:layout_constraintStart_toStartOf="parent"
+            android:visibility="gone"/>
 
         <ImageButton
             android:id="@+id/settingsButton"
@@ -63,7 +53,7 @@
 
         <com.example.voidui.AlphabetScrollerView
             android:id="@+id/alphabetScroller"
-            android:layout_width="wrap_content"
+            android:layout_width="100dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="18dp"
             android:gravity="end"
@@ -71,7 +61,8 @@
             android:orientation="vertical"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="@+id/recyclerView"
-            app:layout_constraintEnd_toEndOf="parent"/>
+            app:layout_constraintEnd_toEndOf="parent"
+            android:visibility="gone"/>
 
 <!--        <com.example.voidui.FastScroll-->
 <!--            android:id="@+id/fastScroll"-->

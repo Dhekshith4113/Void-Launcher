@@ -10,6 +10,7 @@ import android.icu.text.SimpleDateFormat
 import android.icu.util.Calendar
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.view.GestureDetector
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -128,11 +129,12 @@ class SettingsActivity : AppCompatActivity() {
         listView = findViewById(R.id.settingsListView)
         val options = listOf(
             "In-App timer reminder",
+            "Permission Stats",
             "Change color theme",
             "Internet Speed Meter",
             "Gestures",
+            "Customization",
             "Change launcher",
-            "Permission Stats",
             "Device settings",
             "Digital Wellbeing",
             "Version"
@@ -204,13 +206,14 @@ class SettingsActivity : AppCompatActivity() {
         listView.setOnItemClickListener { _, _, position, _ ->
             when (position) {
                 0 -> startActivity(Intent(this, InAppTimerReminderActivity::class.java))
-                1 -> showThemeDialog()
-                2 -> showInternetStatsDialog()
-                3 -> showGesturesDialog()
-                4 -> startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
-                5 -> startActivity(Intent(this, PermissionsActivity::class.java))
-                6 -> startActivity(Intent(Settings.ACTION_SETTINGS))
-                7 -> try {
+                1 -> startActivity(Intent(this, PermissionsActivity::class.java))
+                2 -> showThemeDialog()
+                3 -> showInternetStatsDialog()
+                4 -> showGesturesDialog()
+                5 -> showCustomizationDialog()
+                6 -> startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+                7 -> startActivity(Intent(Settings.ACTION_SETTINGS))
+                8 -> try {
                     val intent = Intent()
                     intent.setClassName(
                         "com.samsung.android.forest",
@@ -222,7 +225,7 @@ class SettingsActivity : AppCompatActivity() {
                         .show()
                 }
 
-                8 -> snackBar.show()
+                9 -> snackBar.show()
 
                 else -> {
                     Toast.makeText(this, "Something's wrong!", Toast.LENGTH_SHORT).show()
@@ -397,6 +400,8 @@ class SettingsActivity : AppCompatActivity() {
             .setCancelable(true)
             .create()
 
+        dialogView.findViewById<SwitchCompat>(R.id.applyThemedIcon).isChecked = SharedPreferencesManager.isThemedIconsEnabled(this)
+
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialogView.findViewById<RadioButton>(R.id.radioDark).setOnClickListener {
             val mode = AppCompatDelegate.MODE_NIGHT_YES
@@ -415,6 +420,9 @@ class SettingsActivity : AppCompatActivity() {
             ThemeManager.saveThemeMode(this, mode)
             recreate()
             dialog.dismiss()
+        }
+        dialogView.findViewById<SwitchCompat>(R.id.applyThemedIcon).setOnCheckedChangeListener { _, isChecked ->
+            SharedPreferencesManager.setThemedIconsEnabled(this, isChecked)
         }
 
         when (ThemeManager.getSavedThemeMode(this)) {
@@ -641,6 +649,78 @@ class SettingsActivity : AppCompatActivity() {
         dialog.setOnDismissListener {
             lockSwitch = null
             doubleTapSwitch = null
+        }
+
+        dialog.show()
+    }
+
+    private fun showCustomizationDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_customization, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+
+        val appListTv: TextView = dialogView.findViewById(R.id.appListTv)
+        val appListSc: SwitchCompat = dialogView.findViewById(R.id.appListSc)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        dialogView.findViewById<SwitchCompat>(R.id.miniDrawerSwitch).isChecked = SharedPreferencesManager.isMiniDrawerEnabled(this)
+
+        if (SharedPreferencesManager.isAppDrawerEnabled(this)) {
+            dialogView.findViewById<RadioButton>(R.id.appListBtn).isChecked = false
+            dialogView.findViewById<RadioButton>(R.id.appDrawerBtn).isChecked = true
+            appListTv.text = "Show app name"
+            appListSc.isChecked = SharedPreferencesManager.isAppNameToggleEnabled(this)
+        } else {
+            dialogView.findViewById<RadioButton>(R.id.appListBtn).isChecked = true
+            dialogView.findViewById<RadioButton>(R.id.appDrawerBtn).isChecked = false
+            appListTv.text = "Show app icon"
+            appListSc.isChecked = SharedPreferencesManager.isAppIconToggleEnabled(this)
+        }
+
+        if (SharedPreferencesManager.isMiniDrawerEnabled(this)) {
+            dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppName).visibility = View.VISIBLE
+            dialogView.findViewById<SwitchCompat>(R.id.miniDrawerAppNameSwitch).isChecked = SharedPreferencesManager.isMiniAppNameToggleEnabled(this)
+        } else {
+            dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppName).visibility = View.GONE
+        }
+
+        dialogView.findViewById<RadioButton>(R.id.appListBtn).setOnClickListener {
+            SharedPreferencesManager.setAppDrawerEnabled(this, false)
+            appListTv.text = "Show app icon"
+            appListSc.isChecked = SharedPreferencesManager.isAppIconToggleEnabled(this)
+        }
+
+        dialogView.findViewById<RadioButton>(R.id.appDrawerBtn).setOnClickListener {
+            SharedPreferencesManager.setAppDrawerEnabled(this, true)
+            appListTv.text = "Show app name"
+            appListSc.isChecked = SharedPreferencesManager.isAppNameToggleEnabled(this)
+        }
+
+        appListSc.setOnCheckedChangeListener { _, isChecked ->
+            if (SharedPreferencesManager.isAppDrawerEnabled(this)) {
+                SharedPreferencesManager.setAppNameToggleEnabled(this, isChecked)
+            } else {
+                SharedPreferencesManager.setAppIconToggleEnabled(this, isChecked)
+            }
+        }
+
+        dialogView.findViewById<SwitchCompat>(R.id.miniDrawerSwitch).setOnCheckedChangeListener { _, isChecked ->
+            SharedPreferencesManager.setMiniDrawerEnabled(this, isChecked)
+            if (isChecked) {
+                dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppName).visibility = View.VISIBLE
+            } else {
+                dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppName).visibility = View.GONE
+            }
+        }
+
+        dialogView.findViewById<SwitchCompat>(R.id.miniDrawerAppNameSwitch).setOnCheckedChangeListener { _, isChecked ->
+            SharedPreferencesManager.setMiniAppNameToggleEnabled(this, isChecked)
+        }
+
+        dialog.setOnDismissListener {
+            SharedPreferencesManager.setRefreshViewEnabled(this, true)
         }
 
         dialog.show()

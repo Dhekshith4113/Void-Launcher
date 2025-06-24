@@ -1,6 +1,7 @@
 package com.example.voidui
 
 import android.annotation.SuppressLint
+import android.annotation.TargetApi
 import android.app.AlertDialog
 import android.content.ClipData
 import android.content.Context
@@ -10,9 +11,13 @@ import android.content.pm.PackageManager
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Point
+import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.view.GestureDetector
 import android.view.LayoutInflater
@@ -21,7 +26,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.imageview.ShapeableImageView
+import com.google.android.material.shape.RelativeCornerSize
+import com.google.android.material.shape.ShapeAppearanceModel
 
 class AppListAdapter(
     private val context: Context,
@@ -35,11 +44,16 @@ class AppListAdapter(
     private var newAppPackages: Set<String> = emptySet()
     private var highlightedInitial: Char? = null
 
+    companion object {
+        private const val VIEW_TYPE_LIST = 0
+        private const val VIEW_TYPE_GRID = 1
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val icon: ImageView? = itemView.findViewById(R.id.appIcon)
+        val icon: ShapeableImageView = itemView.findViewById(R.id.appIcon)
         val name: TextView = itemView.findViewById(R.id.appName)
-        val newAppName: TextView = itemView.findViewById(R.id.newText)
+        val newAppName: TextView? = itemView.findViewById(R.id.newText)
 
         private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
@@ -72,29 +86,228 @@ class AppListAdapter(
         }
     }
 
+    override fun getItemViewType(position: Int): Int {
+        return if (SharedPreferencesManager.isAppDrawerEnabled(context)) VIEW_TYPE_GRID else VIEW_TYPE_LIST
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_app, parent, false)
+        val layoutId = if (viewType == VIEW_TYPE_GRID) R.layout.item_app_grid else R.layout.item_app
+        val view = LayoutInflater.from(parent.context).inflate(layoutId, parent, false)
         return ViewHolder(view)
     }
 
     override fun getItemCount(): Int = apps.size
 
+//    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+//        val app = apps[position]
+//        val appLabel = app.loadLabel(pm).toString()
+//        val shouldDim = highlightedInitial != null && !appLabel.startsWith(highlightedInitial!!, ignoreCase = true)
+//
+//        holder.itemView.alpha = if (shouldDim) 0.2f else 1f
+//        holder.icon.setBackgroundResource(0)
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//            // For Android 13+ (API 33+), try to get adaptive icon
+//            val icon = pm.getApplicationIcon(app)
+//            if (icon is AdaptiveIconDrawable) {
+//                // Try to get monochrome layer
+//                val monochromeDrawable = icon.monochrome
+//                if (monochromeDrawable != null) {
+//                    val tintedIcon = monochromeDrawable.mutate()
+//                    tintedIcon.setTint(ContextCompat.getColor(context, R.color.textColorPrimary))
+//                    val layoutParams = holder.icon.layoutParams as ViewGroup.LayoutParams
+//                    layoutParams.width = 58.dp
+//                    layoutParams.height = 58.dp
+//                    holder.icon.layoutParams = layoutParams
+//                    holder.icon.setImageDrawable(tintedIcon)
+//                } else {
+//                    holder.icon.setImageDrawable(app.loadIcon(pm))
+//                }
+//            } else {
+//                holder.icon.setImageDrawable(app.loadIcon(pm))
+//            }
+//        }
+//
+////        holder.icon.setImageDrawable(app.loadIcon(pm))
+//        holder.name.text = appLabel
+//
+//        if (SharedPreferencesManager.isAppDrawerEnabled(context)) {
+//            holder.icon.visibility = View.VISIBLE
+//            if (SharedPreferencesManager.isAppNameToggleEnabled(context)) {
+//                holder.name.visibility = View.VISIBLE
+//                val layoutParams = holder.icon.layoutParams as ViewGroup.MarginLayoutParams
+//                layoutParams.topMargin = 0.dp
+//                layoutParams.bottomMargin = 0.dp
+//                holder.icon.layoutParams = layoutParams
+//            } else {
+//                holder.name.visibility = View.GONE
+//                val layoutParams = holder.icon.layoutParams as ViewGroup.MarginLayoutParams
+//                layoutParams.topMargin = 12.spToPx.pxToDp
+//                layoutParams.bottomMargin = 12.spToPx.pxToDp
+//                holder.icon.layoutParams = layoutParams
+//            }
+//        } else {
+//            holder.name.visibility = View.VISIBLE
+//            if (SharedPreferencesManager.isAppIconToggleEnabled(context)) {
+//                holder.icon.visibility = View.VISIBLE
+//            } else {
+//                holder.icon.visibility = View.GONE
+//            }
+//        }
+//
+//        if (newAppPackages.contains(app.packageName)) {
+//            holder.newAppName?.visibility = View.VISIBLE
+//        } else {
+//            holder.newAppName?.visibility = View.GONE
+//        }
+//
+//        holder.itemView.setOnLongClickListener {
+//            val clipData = ClipData.newPlainText("packageName", app.packageName)
+//            val shadow = AppIconDragShadowBuilder(context, app)
+//            it.startDragAndDrop(clipData, shadow, app, 0)
+//            onAppDragStarted?.invoke(app)
+//            true
+//        }
+//    }
+
+    // Add this method to your AppListAdapter class
+    private fun loadThemedIcon(app: ApplicationInfo, holder: ViewHolder) {
+        try {
+            // First, try to get the monochrome icon
+            val monochromeIcon = getMonochromeIcon(app)
+
+            if (monochromeIcon != null) {
+                // Apply themed icon styling
+                applyThemedIconStyling(holder, monochromeIcon)
+            } else {
+                // Fallback to regular icon
+                holder.icon.setImageDrawable(app.loadIcon(pm))
+                // Reset any previous themed styling
+                resetIconStyling(holder)
+            }
+        } catch (e: Exception) {
+            // Fallback to regular icon if anything goes wrong
+            holder.icon.setImageDrawable(app.loadIcon(pm))
+            resetIconStyling(holder)
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.TIRAMISU)
+    private fun getMonochromeIcon(app: ApplicationInfo): Drawable? {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // For Android 13+ (API 33+), try to get adaptive icon
+                val icon = pm.getApplicationIcon(app)
+                if (icon is AdaptiveIconDrawable) {
+                    // Try to get monochrome layer
+                    val monochromeDrawable = icon.monochrome
+                    if (monochromeDrawable != null) {
+                        return monochromeDrawable
+                    }
+                }
+            }
+
+            // Fallback method: try to get monochrome resource directly
+            val resources = pm.getResourcesForApplication(app)
+            val monochromeId = resources.getIdentifier("ic_launcher_monochrome", "drawable", app.packageName)
+
+            if (monochromeId != 0) {
+                return ContextCompat.getDrawable(context, monochromeId)
+            }
+
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun applyThemedIconStyling(holder: ViewHolder, monochromeIcon: Drawable) {
+        // Create a themed background (squircle shape)
+        val backgroundDrawable = ContextCompat.getDrawable(context, R.drawable.themed_icon_background)
+            ?: createThemedBackground()
+
+        // Tint the monochrome icon with your desired color
+        val tintedIcon = monochromeIcon.mutate()
+        tintedIcon.setTint(ContextCompat.getColor(context, R.color.themed_icon_foreground))
+
+        // Create layered drawable with background and scaled foreground
+        val layerDrawable = LayerDrawable(arrayOf(backgroundDrawable, tintedIcon))
+
+        // Use negative padding to make the icon extend beyond the background bounds
+        val negativePadding = (-18 * context.resources.displayMetrics.density).toInt() // -18dp
+        layerDrawable.setLayerInset(1, negativePadding, negativePadding, negativePadding, negativePadding)
+
+        holder.icon.setImageDrawable(layerDrawable)
+
+        // Apply squircle corner radius to match the background
+        holder.icon.shapeAppearanceModel = ShapeAppearanceModel.builder()
+            .setAllCornerSizes(16.dp.toFloat()) // 16dp corner radius for squircle
+            .build()
+    }
+
+    private fun resetIconStyling(holder: ViewHolder) {
+        // Reset to default appearance
+        holder.icon.shapeAppearanceModel = ShapeAppearanceModel.builder()
+            .setAllCornerSizes(RelativeCornerSize(0.22f))
+            .build()
+    }
+
+    private fun createThemedBackground(): Drawable {
+        // Create a programmatic background if you don't have a drawable resource
+        val shape = GradientDrawable()
+        shape.shape = GradientDrawable.OVAL
+        shape.setColor(ContextCompat.getColor(context, R.color.themed_icon_background))
+        return shape
+    }
+
+    // Update your onBindViewHolder method
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val app = apps[position]
         val appLabel = app.loadLabel(pm).toString()
         val shouldDim = highlightedInitial != null && !appLabel.startsWith(highlightedInitial!!, ignoreCase = true)
 
         holder.itemView.alpha = if (shouldDim) 0.2f else 1f
-        holder.icon?.setBackgroundResource(0)
-        holder.icon?.setImageDrawable(app.loadIcon(pm))
+        holder.icon.setBackgroundResource(0)
+
+        // Check if themed icons are enabled (you might want to add this preference)
+        if (SharedPreferencesManager.isThemedIconsEnabled(context)) {
+            loadThemedIcon(app, holder)
+        } else {
+            holder.icon.setImageDrawable(app.loadIcon(pm))
+            resetIconStyling(holder)
+        }
+
         holder.name.text = appLabel
 
-        if (SharedPreferencesManager.isAppIconToggleEnabled(context)) holder.icon?.visibility = View.VISIBLE else holder.icon?.visibility = View.GONE
+        // Rest of your existing code...
+        if (SharedPreferencesManager.isAppDrawerEnabled(context)) {
+            holder.icon.visibility = View.VISIBLE
+            if (SharedPreferencesManager.isAppNameToggleEnabled(context)) {
+                holder.name.visibility = View.VISIBLE
+                val layoutParams = holder.icon.layoutParams as ViewGroup.MarginLayoutParams
+                layoutParams.topMargin = 0.dp
+                layoutParams.bottomMargin = 0.dp
+                holder.icon.layoutParams = layoutParams
+            } else {
+                holder.name.visibility = View.GONE
+                val layoutParams = holder.icon.layoutParams as ViewGroup.MarginLayoutParams
+                layoutParams.topMargin = 12.spToPx.pxToDp
+                layoutParams.bottomMargin = 12.spToPx.pxToDp
+                holder.icon.layoutParams = layoutParams
+            }
+        } else {
+            holder.name.visibility = View.VISIBLE
+            if (SharedPreferencesManager.isAppIconToggleEnabled(context)) {
+                holder.icon.visibility = View.VISIBLE
+            } else {
+                holder.icon.visibility = View.GONE
+            }
+        }
 
         if (newAppPackages.contains(app.packageName)) {
-            holder.newAppName.visibility = View.VISIBLE
+            holder.newAppName?.visibility = View.VISIBLE
         } else {
-            holder.newAppName.visibility = View.GONE
+            holder.newAppName?.visibility = View.GONE
         }
 
         holder.itemView.setOnLongClickListener {
@@ -105,6 +318,10 @@ class AppListAdapter(
             true
         }
     }
+
+    private val Int.dp: Int get() = (this * context.resources.displayMetrics.density).toInt()
+    private val Int.spToPx: Float get() = this * context.resources.displayMetrics.scaledDensity
+    private val Float.pxToDp: Int get() = (this / context.resources.displayMetrics.density).toInt()
 
     private fun showAppOptionsDialog(context: Context, appInfo: ApplicationInfo) {
         val packageManager = context.packageManager
