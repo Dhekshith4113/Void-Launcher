@@ -10,7 +10,6 @@ import android.icu.text.SimpleDateFormat
 import android.icu.util.Calendar
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Log
 import android.view.GestureDetector
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -667,56 +666,127 @@ class SettingsActivity : AppCompatActivity() {
 
         dialogView.findViewById<SwitchCompat>(R.id.miniDrawerSwitch).isChecked = SharedPreferencesManager.isMiniDrawerEnabled(this)
 
+
         if (SharedPreferencesManager.isAppDrawerEnabled(this)) {
             dialogView.findViewById<RadioButton>(R.id.appListBtn).isChecked = false
             dialogView.findViewById<RadioButton>(R.id.appDrawerBtn).isChecked = true
-            appListTv.text = "Show app name"
-            appListSc.isChecked = SharedPreferencesManager.isAppNameToggleEnabled(this)
+            dialogView.findViewById<LinearLayout>(R.id.appDrawerRowSize).visibility = View.VISIBLE
+            appListTv.text = "Hide app name"
+            appListSc.isChecked = SharedPreferencesManager.isHideAppNameEnabled(this)
+
+            if (SharedPreferencesManager.getAppDrawerRowSize(this) == 4) {
+                dialogView.findViewById<RadioButton>(R.id.rowSizeFour).isChecked = true
+                dialogView.findViewById<RadioButton>(R.id.rowSizeFive).isChecked = false
+            } else if (SharedPreferencesManager.getAppDrawerRowSize(this) == 5) {
+                dialogView.findViewById<RadioButton>(R.id.rowSizeFour).isChecked = false
+                dialogView.findViewById<RadioButton>(R.id.rowSizeFive).isChecked = true
+            }else {
+                dialogView.findViewById<RadioButton>(R.id.rowSizeFour).isChecked = false
+                dialogView.findViewById<RadioButton>(R.id.rowSizeFive).isChecked = false
+            }
+
         } else {
             dialogView.findViewById<RadioButton>(R.id.appListBtn).isChecked = true
             dialogView.findViewById<RadioButton>(R.id.appDrawerBtn).isChecked = false
+            dialogView.findViewById<LinearLayout>(R.id.appDrawerRowSize).visibility = View.GONE
             appListTv.text = "Show app icon"
-            appListSc.isChecked = SharedPreferencesManager.isAppIconToggleEnabled(this)
+            appListSc.isChecked = SharedPreferencesManager.isShowAppIconEnabled(this)
         }
 
         if (SharedPreferencesManager.isMiniDrawerEnabled(this)) {
             dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppName).visibility = View.VISIBLE
-            dialogView.findViewById<SwitchCompat>(R.id.miniDrawerAppNameSwitch).isChecked = SharedPreferencesManager.isMiniAppNameToggleEnabled(this)
+            dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppCount).visibility = View.VISIBLE
+            dialogView.findViewById<SwitchCompat>(R.id.miniDrawerAppNameSwitch).isChecked = SharedPreferencesManager.isShowMiniAppNameEnabled(this)
+            dialogView.findViewById<TextView>(R.id.countTextView).text = SharedPreferencesManager.getMiniAppDrawerCount(this).toString()
         } else {
             dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppName).visibility = View.GONE
+            dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppCount).visibility = View.VISIBLE
+        }
+
+        if (SharedPreferencesManager.getAppIconShape(this) == "round") {
+            dialogView.findViewById<RadioButton>(R.id.roundAppIcon).isChecked = true
+            dialogView.findViewById<RadioButton>(R.id.squricleAppIcon).isChecked = false
+        } else {
+            dialogView.findViewById<RadioButton>(R.id.roundAppIcon).isChecked = false
+            dialogView.findViewById<RadioButton>(R.id.squricleAppIcon).isChecked = true
         }
 
         dialogView.findViewById<RadioButton>(R.id.appListBtn).setOnClickListener {
             SharedPreferencesManager.setAppDrawerEnabled(this, false)
             appListTv.text = "Show app icon"
-            appListSc.isChecked = SharedPreferencesManager.isAppIconToggleEnabled(this)
+            appListSc.isChecked = SharedPreferencesManager.isShowAppIconEnabled(this)
+            dialogView.findViewById<LinearLayout>(R.id.appDrawerRowSize).visibility = View.GONE
         }
 
         dialogView.findViewById<RadioButton>(R.id.appDrawerBtn).setOnClickListener {
             SharedPreferencesManager.setAppDrawerEnabled(this, true)
-            appListTv.text = "Show app name"
-            appListSc.isChecked = SharedPreferencesManager.isAppNameToggleEnabled(this)
+            appListTv.text = "Hide app name"
+            appListSc.isChecked = SharedPreferencesManager.isHideAppNameEnabled(this)
+            dialogView.findViewById<LinearLayout>(R.id.appDrawerRowSize).visibility = View.VISIBLE
+
+            if (SharedPreferencesManager.getAppDrawerRowSize(this) == 4) {
+                dialogView.findViewById<RadioButton>(R.id.rowSizeFour).isChecked = true
+                dialogView.findViewById<RadioButton>(R.id.rowSizeFive).isChecked = false
+            } else if (SharedPreferencesManager.getAppDrawerRowSize(this) == 5) {
+                dialogView.findViewById<RadioButton>(R.id.rowSizeFour).isChecked = false
+                dialogView.findViewById<RadioButton>(R.id.rowSizeFive).isChecked = true
+            }else {
+                dialogView.findViewById<RadioButton>(R.id.rowSizeFour).isChecked = false
+                dialogView.findViewById<RadioButton>(R.id.rowSizeFive).isChecked = false
+            }
         }
 
         appListSc.setOnCheckedChangeListener { _, isChecked ->
             if (SharedPreferencesManager.isAppDrawerEnabled(this)) {
-                SharedPreferencesManager.setAppNameToggleEnabled(this, isChecked)
+                SharedPreferencesManager.setHideAppNameEnabled(this, isChecked)
             } else {
-                SharedPreferencesManager.setAppIconToggleEnabled(this, isChecked)
+                SharedPreferencesManager.setShowAppIconEnabled(this, isChecked)
             }
+        }
+
+        dialogView.findViewById<RadioButton>(R.id.rowSizeFour).setOnClickListener {
+            SharedPreferencesManager.setAppDrawerRowSize(this, 4)
+        }
+
+        dialogView.findViewById<RadioButton>(R.id.rowSizeFive).setOnClickListener {
+            SharedPreferencesManager.setAppDrawerRowSize(this, 5)
         }
 
         dialogView.findViewById<SwitchCompat>(R.id.miniDrawerSwitch).setOnCheckedChangeListener { _, isChecked ->
             SharedPreferencesManager.setMiniDrawerEnabled(this, isChecked)
             if (isChecked) {
                 dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppName).visibility = View.VISIBLE
+                dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppCount).visibility = View.VISIBLE
             } else {
                 dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppName).visibility = View.GONE
+                dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppCount).visibility = View.GONE
             }
         }
 
         dialogView.findViewById<SwitchCompat>(R.id.miniDrawerAppNameSwitch).setOnCheckedChangeListener { _, isChecked ->
-            SharedPreferencesManager.setMiniAppNameToggleEnabled(this, isChecked)
+            SharedPreferencesManager.setShowMiniAppNameEnabled(this, isChecked)
+        }
+
+        dialogView.findViewById<ImageButton>(R.id.incrementButton).setOnClickListener {
+            var count = SharedPreferencesManager.getMiniAppDrawerCount(this)
+            if (count < 4) count++
+            SharedPreferencesManager.setMiniAppDrawerCount(this, count)
+            dialogView.findViewById<TextView>(R.id.countTextView).text = count.toString()
+        }
+
+        dialogView.findViewById<ImageButton>(R.id.decrementButton).setOnClickListener {
+            var count = SharedPreferencesManager.getMiniAppDrawerCount(this)
+            if (count > 0) count--
+            SharedPreferencesManager.setMiniAppDrawerCount(this, count)
+            dialogView.findViewById<TextView>(R.id.countTextView).text = count.toString()
+        }
+
+        dialogView.findViewById<RadioButton>(R.id.roundAppIcon).setOnClickListener {
+            SharedPreferencesManager.setAppIconShape(this, "round")
+        }
+
+        dialogView.findViewById<RadioButton>(R.id.squricleAppIcon).setOnClickListener {
+            SharedPreferencesManager.setAppIconShape(this, "squricle")
         }
 
         dialog.setOnDismissListener {

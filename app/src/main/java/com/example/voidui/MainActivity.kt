@@ -47,8 +47,6 @@ class MainActivity : AppCompatActivity() {
     private var toastShownThisDrag = false
     private var shouldMoveIndicator = true
 
-    val drawerSize = 4
-
     private val bubbleBackground by lazy {
         ContextCompat.getDrawable(this, R.drawable.bubble_background)
     }
@@ -91,7 +89,8 @@ class MainActivity : AppCompatActivity() {
             }
 
         if (SharedPreferencesManager.isAppDrawerEnabled(this)) {
-            recyclerView.layoutManager = GridLayoutManager(this, 4)
+            val appDrawerRowSize = SharedPreferencesManager.getAppDrawerRowSize(this)
+            recyclerView.layoutManager = GridLayoutManager(this, appDrawerRowSize)
         } else {
             recyclerView.layoutManager = LinearLayoutManager(this)
         }
@@ -115,7 +114,6 @@ class MainActivity : AppCompatActivity() {
 //        val indexMap = getAlphabetIndexMap(apps)
 //        val layoutManager = recyclerView.layoutManager as LinearLayoutManager
 //
-//        scroller.visibility = View.VISIBLE
 //        scroller.setup(usedAlphabets, indexMap, layoutManager, bubbleBackground)
 //        scroller.onLetterSelected = { letter ->
 //            listAdapter.setHighlightedInitial(letter)
@@ -195,6 +193,7 @@ class MainActivity : AppCompatActivity() {
                     val recyclerView = view as RecyclerView
                     val draggedApp = event.localState as ApplicationInfo
                     val isAppFromDrawer = !listAdapter.getApps().contains(draggedApp)
+                    val drawerSize = SharedPreferencesManager.getMiniAppDrawerCount(this)
                     if (!isAppFromDrawer && (drawerAdapter.getApps().size >= drawerSize + 1)) {
                         if (!toastShownThisDrag) {
                             drawerAdapter.removeDropIndicator()
@@ -246,6 +245,7 @@ class MainActivity : AppCompatActivity() {
                     val isAppFromDrawer = !listAdapter.getApps().contains(draggedApp)
                     if (view == drawerRecyclerView) {
                         // Reorder or return to drawer
+                        val drawerSize = SharedPreferencesManager.getMiniAppDrawerCount(this)
                         if (!isAppFromDrawer && drawerAdapter.getApps().size >= drawerSize) {
                             return@setOnDragListener true
                         } else {
@@ -289,12 +289,6 @@ class MainActivity : AppCompatActivity() {
                     listAdapter.addApp(app)
                     saveDrawerApps(drawerAdapter.getApps())
                     saveListApps(listAdapter.getApps())
-                    true
-                }
-
-                DragEvent.ACTION_DRAG_EXITED -> {
-                    val app = event.localState as ApplicationInfo
-                    listAdapter.addApp(app)
                     true
                 }
 

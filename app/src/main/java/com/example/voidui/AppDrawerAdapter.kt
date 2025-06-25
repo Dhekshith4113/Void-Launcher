@@ -7,10 +7,8 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
-import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -27,11 +25,11 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getColor
 import androidx.recyclerview.widget.RecyclerView
-import com.example.voidui.AppListAdapter.ViewHolder
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.shape.RelativeCornerSize
 import com.google.android.material.shape.ShapeAppearanceModel
@@ -46,7 +44,19 @@ class AppDrawerAdapter(
     private val onAppClick: (ApplicationInfo) -> Unit
 ) : RecyclerView.Adapter<AppDrawerAdapter.ViewHolder>() {
 
-    private val drawerAppSize: Int = MainActivity().drawerSize
+    private val drawerAppSize: Int = SharedPreferencesManager.getMiniAppDrawerCount(context)
+
+    private var parent: RecyclerView? = null
+
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        parent = recyclerView
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+        parent = null
+    }
 
     companion object {
         const val DROP_INDICATOR_PACKAGE = "__DROP_INDICATOR__"
@@ -60,6 +70,7 @@ class AppDrawerAdapter(
 
     @SuppressLint("ClickableViewAccessibility")
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val miniDrawerLayout: LinearLayout = view.findViewById(R.id.miniDrawerLayout)
         val icon: ShapeableImageView = view.findViewById(R.id.appIcon)
         val name: TextView = view.findViewById(R.id.appName)
 
@@ -157,9 +168,13 @@ class AppDrawerAdapter(
     }
 
     private fun applyThemedIconStyling(holder: AppDrawerAdapter.ViewHolder, monochromeIcon: Drawable) {
-        // Create a themed background (squircle shape)
-        val backgroundDrawable = ContextCompat.getDrawable(context, R.drawable.themed_icon_background)
-            ?: createThemedBackground()
+        // Create a themed background
+        val backgroundDrawable = if (SharedPreferencesManager.getAppIconShape(context) == "round") {
+            ContextCompat.getDrawable(context, R.drawable.themed_icon_background_rounded)?: createThemedBackground()
+        } else {
+            ContextCompat.getDrawable(context, R.drawable.squricle_512_271)?: createThemedBackground()
+        }
+        backgroundDrawable.setTint(getColor(context, R.color.themed_icon_background))
 
         // Tint the monochrome icon with your desired color
         val tintedIcon = monochromeIcon.mutate()
@@ -242,6 +257,13 @@ class AppDrawerAdapter(
         if (app.packageName == DROP_INDICATOR_PACKAGE) {
             holder.icon.setImageResource(0)
             holder.icon.setBackgroundResource(R.drawable.drop_indicator)
+            if (SharedPreferencesManager.isShowMiniAppNameEnabled(context)) {
+                holder.name.visibility = View.VISIBLE
+                holder.miniDrawerLayout.setPadding(0, 6.dp, 0, 6.dp)
+            } else {
+                holder.name.visibility = View.GONE
+                holder.miniDrawerLayout.setPadding(0, 18.dp, 0, 0)
+            }
             holder.itemView.setOnLongClickListener(null)
         } else {
             holder.name.text = app.loadLabel(pm)
@@ -255,18 +277,12 @@ class AppDrawerAdapter(
                 resetIconStyling(holder)
             }
 
-            if (SharedPreferencesManager.isMiniAppNameToggleEnabled(context)) {
+            if (SharedPreferencesManager.isShowMiniAppNameEnabled(context)) {
                 holder.name.visibility = View.VISIBLE
-                val layoutParams = holder.icon.layoutParams as ViewGroup.MarginLayoutParams
-                layoutParams.topMargin = 0.dp
-                layoutParams.bottomMargin = 0.dp
-                holder.icon.layoutParams = layoutParams
+                holder.miniDrawerLayout.setPadding(0, 6.dp, 0, 6.dp)
             } else {
                 holder.name.visibility = View.GONE
-                val layoutParams = holder.icon.layoutParams as ViewGroup.MarginLayoutParams
-                layoutParams.topMargin = 12.spToPx.pxToDp
-                layoutParams.bottomMargin = 12.spToPx.pxToDp
-                holder.icon.layoutParams = layoutParams
+                holder.miniDrawerLayout.setPadding(0, 18.dp, 0, 18.dp)
             }
 
             holder.itemView.setOnLongClickListener {

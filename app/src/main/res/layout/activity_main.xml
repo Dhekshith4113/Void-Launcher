@@ -17,6 +17,7 @@
             android:id="@+id/recyclerView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            android:layout_marginTop="8dp"
             android:layout_marginStart="18dp"
             android:layout_marginEnd="18dp"
             android:layout_weight="1"
@@ -29,21 +30,19 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/appDrawerRecyclerView"
             android:layout_width="match_parent"
-            android:layout_height="80dp"
+            android:layout_height="wrap_content"
             android:overScrollMode="never"
             android:scrollbars="none"
             android:background="@android:color/transparent"
+            android:paddingVertical="8dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            android:visibility="gone"/>
+            app:layout_constraintStart_toStartOf="parent"/>
 
         <ImageButton
             android:id="@+id/settingsButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginEnd="18dp"
-            android:layout_marginBottom="18dp"
             android:background="@android:color/transparent"
             android:contentDescription="Settings"
             app:layout_constraintBottom_toBottomOf="@+id/recyclerView"
@@ -51,18 +50,16 @@
             app:srcCompat="@drawable/settings_24px"
             app:tint="@color/textColorPrimary" />
 
-        <com.example.voidui.AlphabetScrollerView
-            android:id="@+id/alphabetScroller"
-            android:layout_width="100dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="18dp"
-            android:gravity="end"
-            android:background="@android:color/transparent"
-            android:orientation="vertical"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="@+id/recyclerView"
-            app:layout_constraintEnd_toEndOf="parent"
-            android:visibility="gone"/>
+<!--        <com.example.voidui.AlphabetScrollerView-->
+<!--            android:id="@+id/alphabetScroller"-->
+<!--            android:layout_width="100dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:gravity="end"-->
+<!--            android:background="@android:color/transparent"-->
+<!--            android:orientation="vertical"-->
+<!--            app:layout_constraintTop_toTopOf="parent"-->
+<!--            app:layout_constraintBottom_toBottomOf="@+id/recyclerView"-->
+<!--            app:layout_constraintEnd_toEndOf="parent"/>-->
 
 <!--        <com.example.voidui.FastScroll-->
 <!--            android:id="@+id/fastScroll"-->

@@ -1,21 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="18dp"
-    android:background="@drawable/dialog_background">
+    android:background="@drawable/dialog_background"
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/textView5"
         style="@style/AppTitleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Customization"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:text="Customization" />
 
     <RadioGroup
         android:id="@+id/radioGroup"
@@ -49,8 +48,7 @@
         android:id="@+id/appList"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@+id/radioGroup">
+        android:orientation="horizontal">
 
         <TextView
             android:id="@+id/appListTv"
@@ -67,22 +65,54 @@
 
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/appDrawerRowSize"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:text="Row size"
+            style="@style/AppBaseText"/>
+
+        <RadioGroup
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/rowSizeFour"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="4"
+                style="@style/AppBaseText"/>
+
+            <RadioButton
+                android:id="@+id/rowSizeFive"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="5"
+                style="@style/AppBaseText"/>
+
+        </RadioGroup>
+
+    </LinearLayout>
+
     <View
         android:id="@+id/view"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="@color/divider_grey"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/appList"/>
+        android:background="@color/divider_grey"/>
 
     <LinearLayout
         android:id="@+id/miniDrawer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@+id/view"
-        tools:layout_editor_absoluteX="18dp">
+        android:orientation="horizontal">
 
         <TextView
             style="@style/AppBaseText"
@@ -102,8 +132,7 @@
         android:id="@+id/miniDrawerAppName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@+id/miniDrawer">
+        android:orientation="horizontal">
 
         <TextView
             android:layout_width="0dp"
@@ -119,4 +148,91 @@
 
     </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <LinearLayout
+        android:id="@+id/miniDrawerAppCount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginVertical="10dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:text="App count"
+            style="@style/AppBaseText"/>
+
+        <ImageButton
+            android:id="@+id/incrementButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="Add"
+            android:src="@drawable/sharp_add_24"
+            android:background="@android:color/transparent"
+            app:tint="@color/textColorPrimary" />
+
+        <TextView
+            android:id="@+id/countTextView"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:text="0"
+            style="@style/AppBaseText"/>
+
+        <ImageButton
+            android:id="@+id/decrementButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="Remove"
+            android:src="@drawable/sharp_remove_24"
+            android:background="@android:color/transparent"
+            app:tint="@color/textColorPrimary" />
+
+    </LinearLayout>
+
+    <View
+        android:id="@+id/view2"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider_grey"/>
+
+    <LinearLayout
+        android:id="@+id/appIconShape"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:text="App icon shape"
+            style="@style/AppBaseText"/>
+
+        <RadioGroup
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/roundAppIcon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Round"
+                style="@style/AppBaseText"/>
+
+            <RadioButton
+                android:id="@+id/squricleAppIcon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Squricle"
+                style="@style/AppBaseText"/>
+
+        </RadioGroup>
+
+    </LinearLayout>
+
+</LinearLayout>

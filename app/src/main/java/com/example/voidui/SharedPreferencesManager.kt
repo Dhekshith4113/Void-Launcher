@@ -106,19 +106,19 @@ object SharedPreferencesManager {
         getPrefs(context).edit().putBoolean(KEY_IS_HOME_LAUNCHER, enabled).apply()
     }
 
-    fun isAppIconToggleEnabled(context: Context): Boolean {
+    fun isShowAppIconEnabled(context: Context): Boolean {
         return getPrefs(context).getBoolean(KEY_IS_APP_ICON_TOGGLE_ENABLED, false)
     }
 
-    fun setAppIconToggleEnabled(context: Context, enabled: Boolean) {
+    fun setShowAppIconEnabled(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_IS_APP_ICON_TOGGLE_ENABLED, enabled).apply()
     }
 
-    fun isAppNameToggleEnabled(context: Context): Boolean {
+    fun isHideAppNameEnabled(context: Context): Boolean {
         return getPrefs(context).getBoolean(KEY_IS_APP_NAME_TOGGLE_ENABLED, false)
     }
 
-    fun setAppNameToggleEnabled(context: Context, enabled: Boolean) {
+    fun setHideAppNameEnabled(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_IS_APP_NAME_TOGGLE_ENABLED, enabled).apply()
     }
 
@@ -138,11 +138,11 @@ object SharedPreferencesManager {
         getPrefs(context).edit().putBoolean(KEY_IS_REFRESH_VIEW_ENABLED, enabled).apply()
     }
 
-    fun isMiniAppNameToggleEnabled(context: Context): Boolean {
+    fun isShowMiniAppNameEnabled(context: Context): Boolean {
         return getPrefs(context).getBoolean(KEY_IS_MINI_APP_NAME_TOGGLE_ENABLED, false)
     }
 
-    fun setMiniAppNameToggleEnabled(context: Context, enabled: Boolean) {
+    fun setShowMiniAppNameEnabled(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_IS_MINI_APP_NAME_TOGGLE_ENABLED, enabled).apply()
     }
 
@@ -162,5 +162,35 @@ object SharedPreferencesManager {
     fun setThemedIconsEnabled(context: Context, enabled: Boolean) {
         val sharedPrefs = context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
         sharedPrefs.edit().putBoolean("themed_icons_enabled", enabled).apply()
+    }
+
+    fun getMiniAppDrawerCount(context: Context): Int {
+        val sharedPrefs = context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        return sharedPrefs.getInt("mini_app_drawer_count", 4)
+    }
+
+    fun setMiniAppDrawerCount(context: Context, count: Int) {
+        val sharedPrefs = context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        sharedPrefs.edit().putInt("mini_app_drawer_count", count).apply()
+    }
+
+    fun getAppDrawerRowSize(context: Context): Int {
+        val sharedPrefs = context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        return sharedPrefs.getInt("app_drawer_row_size", 4)
+    }
+
+    fun setAppDrawerRowSize(context: Context, count: Int) {
+        val sharedPrefs = context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        sharedPrefs.edit().putInt("app_drawer_row_size", count).apply()
+    }
+
+    fun getAppIconShape(context: Context): String? {
+        val sharedPrefs = context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        return sharedPrefs.getString("app_icon_shape", "round")
+    }
+
+    fun setAppIconShape(context: Context, shape: String) {
+        val sharedPrefs = context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        sharedPrefs.edit().putString("app_icon_shape", shape).apply()
     }
 }

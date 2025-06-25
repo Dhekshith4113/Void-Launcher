@@ -19,12 +19,14 @@ import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
@@ -222,9 +224,13 @@ class AppListAdapter(
     }
 
     private fun applyThemedIconStyling(holder: ViewHolder, monochromeIcon: Drawable) {
-        // Create a themed background (squircle shape)
-        val backgroundDrawable = ContextCompat.getDrawable(context, R.drawable.themed_icon_background)
-            ?: createThemedBackground()
+        // Create a themed background
+        val backgroundDrawable = if (SharedPreferencesManager.getAppIconShape(context) == "round") {
+            ContextCompat.getDrawable(context, R.drawable.themed_icon_background_rounded)?: createThemedBackground()
+        } else {
+            ContextCompat.getDrawable(context, R.drawable.squricle_512_271)?: createThemedBackground()
+        }
+        backgroundDrawable.setTint(ContextCompat.getColor(context, R.color.themed_icon_background))
 
         // Tint the monochrome icon with your desired color
         val tintedIcon = monochromeIcon.mutate()
@@ -241,7 +247,7 @@ class AppListAdapter(
 
         // Apply squircle corner radius to match the background
         holder.icon.shapeAppearanceModel = ShapeAppearanceModel.builder()
-            .setAllCornerSizes(16.dp.toFloat()) // 16dp corner radius for squircle
+            .setAllCornerSizes(RelativeCornerSize(0.22f))
             .build()
     }
 
@@ -263,10 +269,11 @@ class AppListAdapter(
     // Update your onBindViewHolder method
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val app = apps[position]
-        val appLabel = app.loadLabel(pm).toString()
-        val shouldDim = highlightedInitial != null && !appLabel.startsWith(highlightedInitial!!, ignoreCase = true)
+//        val appLabel = app.loadLabel(pm).toString()
+//        val shouldDim = highlightedInitial != null && !appLabel.startsWith(highlightedInitial!!, ignoreCase = true)
 
-        holder.itemView.alpha = if (shouldDim) 0.2f else 1f
+//        holder.itemView.alpha = if (shouldDim) 0.2f else 1f
+        holder.name.text = app.loadLabel(pm)
         holder.icon.setBackgroundResource(0)
 
         // Check if themed icons are enabled (you might want to add this preference)
@@ -277,27 +284,13 @@ class AppListAdapter(
             resetIconStyling(holder)
         }
 
-        holder.name.text = appLabel
-
-        // Rest of your existing code...
         if (SharedPreferencesManager.isAppDrawerEnabled(context)) {
             holder.icon.visibility = View.VISIBLE
-            if (SharedPreferencesManager.isAppNameToggleEnabled(context)) {
-                holder.name.visibility = View.VISIBLE
-                val layoutParams = holder.icon.layoutParams as ViewGroup.MarginLayoutParams
-                layoutParams.topMargin = 0.dp
-                layoutParams.bottomMargin = 0.dp
-                holder.icon.layoutParams = layoutParams
-            } else {
-                holder.name.visibility = View.GONE
-                val layoutParams = holder.icon.layoutParams as ViewGroup.MarginLayoutParams
-                layoutParams.topMargin = 12.spToPx.pxToDp
-                layoutParams.bottomMargin = 12.spToPx.pxToDp
-                holder.icon.layoutParams = layoutParams
+            if (SharedPreferencesManager.isHideAppNameEnabled(context)) {
+                holder.name.text = ""
             }
         } else {
-            holder.name.visibility = View.VISIBLE
-            if (SharedPreferencesManager.isAppIconToggleEnabled(context)) {
+            if (SharedPreferencesManager.isShowAppIconEnabled(context)) {
                 holder.icon.visibility = View.VISIBLE
             } else {
                 holder.icon.visibility = View.GONE
