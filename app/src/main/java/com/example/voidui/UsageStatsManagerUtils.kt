@@ -81,13 +81,14 @@ object UsageStatsManagerUtils {
         val appString = usageMap.toList()
             .sortedByDescending { (_, value) -> value }
             .joinToString("\n") { (packageName, usageTime) ->
-                val appName = try {
+                var appName = try {
                     packageManager.getApplicationLabel(
                         packageManager.getApplicationInfo(packageName, 0)
                     ).toString()
                 } catch (e: Exception) {
                     packageName
                 }
+                appName = normalizeAppName(appName)
                 "$appName ${formatTime(usageTime)}"
             }
 
@@ -100,13 +101,14 @@ object UsageStatsManagerUtils {
         val top3 = sortedAppUsage
             .take(3)
             .map { (packageName, time) ->
-                val appName = try {
+                var appName = try {
                     packageManager.getApplicationLabel(
                         packageManager.getApplicationInfo(packageName, 0)
                     ).toString()
                 } catch (e: Exception) {
                     packageName
                 }
+                appName = normalizeAppName(appName)
                 appName to time
             }
             .toMutableList()
@@ -152,6 +154,20 @@ object UsageStatsManagerUtils {
             }
         }
         return packages
+    }
+
+    fun normalizeAppName(label: String): String {
+        val prefixesToRemove = listOf("Samsung ", "Google ", "Galaxy ")
+        var normalized = label
+
+        for (prefix in prefixesToRemove) {
+            if (label.startsWith(prefix, ignoreCase = true)) {
+                normalized = normalized.removePrefix(prefix).trim()
+                break
+            }
+        }
+
+        return normalized
     }
 
 }

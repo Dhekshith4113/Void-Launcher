@@ -32,7 +32,7 @@ class AppToggleAdapter(
         val pm = context.packageManager
         val packageName = appInfo.packageName
 
-        holder.appName.text = appInfo.loadLabel(pm)
+        holder.appName.text = MainActivity().normalizeAppName(appInfo.loadLabel(pm).toString())
 
         // Remove previous listener before setting new one to avoid unwanted callbacks
         holder.appSwitch.setOnCheckedChangeListener(null)

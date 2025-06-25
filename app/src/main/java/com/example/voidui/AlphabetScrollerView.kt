@@ -22,8 +22,7 @@ import kotlin.math.exp
 
 class AlphabetScrollerView @JvmOverloads constructor(
     context: Context,
-    attrs: AttributeSet? = null,
-    var onLetterSelected: ((Char?) -> Unit)? = null
+    attrs: AttributeSet? = null
 ) : LinearLayout(context, attrs) {
 
     private var usedAlphabets: List<Char> = emptyList()
@@ -31,6 +30,8 @@ class AlphabetScrollerView @JvmOverloads constructor(
     private var lastIndex = -1
     private var bubbleBackground: Drawable? = null
     private var layoutManager: LinearLayoutManager? = null
+//    private var floatingBubble: TextView? = null
+//    private var rootOverlay: ViewGroup? = null
 
     init {
         orientation = VERTICAL
@@ -80,26 +81,43 @@ class AlphabetScrollerView @JvmOverloads constructor(
                 val selectedChar = usedAlphabets[index]
                 if (index != lastIndex) {
                     indexMap[selectedChar]?.let { layoutManager?.scrollToPositionWithOffset(it, 0) }
-                    onLetterSelected?.invoke(selectedChar)
-//                    staticScroll(index)                      // STATIC SCROLL BAR WITH AN INDICATOR
-                    staticAnimatedScroll(index)                // STATIC ANIMATED SCROLL BAR WITH AN INDICATOR
+                    staticScroll(index)                      // STATIC SCROLL BAR WITH AN INDICATOR
+//                    staticAnimatedScroll(index)              // STATIC ANIMATED SCROLL BAR WITH AN INDICATOR
 //                    dynamicBendingScroll(index)              // DYNAMIC BENDING SCROLL BAR WITH AN INDICATOR
 //                    dynamicAnimatedBendingScroll(index)      // DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR
 //                    dynamicAnimatedBellCurveScroll(index)    // DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR (BELL CURVE METHOD FOR BENDING)
 //                    newDynamicAnimatedBellCurveScroll(index) // DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR (BELL CURVE METHOD FOR BENDING AND BETTER PERFORMANCE)
                 }
                 lastIndex = index
+
+//                floatingBubble?.let { bubble ->
+//                    bubble.text = selectedChar.toString()
+//                    bubble.visibility = View.VISIBLE
+//
+//                    // Calculate Y position based on raw touch
+//                    val y = event.rawY - bubble.height * 1.5f
+//
+//                    // Calculate X position so it appears to the *left* of AlphabetScrollerView
+//                    val location = IntArray(2)
+//                    getLocationOnScreen(location)
+//                    val alphabetScrollerX = location[0]
+//                    val bubbleX = alphabetScrollerX - bubble.width - 24.dp
+//
+//                    bubble.x = bubbleX.toFloat()
+//                    bubble.y = y
+//                }
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-//                staticScrollReset()                       // STATIC SCROLL BAR WITH AN INDICATOR
-                staticAnimatedScrollReset()                 // STATIC ANIMATED SCROLL BAR WITH AN INDICATOR
+                staticScrollReset()                       // STATIC SCROLL BAR WITH AN INDICATOR
+//                staticAnimatedScrollReset()                 // STATIC ANIMATED SCROLL BAR WITH AN INDICATOR
 //                dynamicBendingScrollReset()               // DYNAMIC BENDING SCROLL BAR WITH AN INDICATOR
 //                dynamicAnimatedBendingScrollReset()       // DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR
 //                dynamicAnimatedBellCurveScrollReset()     // DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR (BELL CURVE METHOD FOR BENDING)
 //                newDynamicAnimatedBellCurveScrollReset()  // DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR (BELL CURVE METHOD FOR BENDING AND BETTER PERFORMANCE)
+
                 lastIndex = -1
-                onLetterSelected?.invoke(null)
+//                floatingBubble?.visibility = View.GONE
             }
         }
         return true
@@ -134,12 +152,12 @@ class AlphabetScrollerView @JvmOverloads constructor(
             val distance = offset.toFloat()
             val curveFactor = exp(-(distance * distance) / (2 * sigma * sigma))
 
-//            val scale = 0.85f + (0.15f * curveFactor)
+            val scale = 0.85f + (0.15f * curveFactor)
             val alpha = 0.4f + (0.6f * curveFactor)
             ViewCompat.animate(child).cancel()
             ViewCompat.animate(child)
-//                .scaleX(scale)
-//                .scaleY(scale)
+                .scaleX(scale)
+                .scaleY(scale)
                 .alpha(alpha)
                 .setDuration(75)
                 .setInterpolator(LinearInterpolator())
@@ -159,16 +177,16 @@ class AlphabetScrollerView @JvmOverloads constructor(
     private fun staticAnimatedScrollReset() {
         for (i in 0 until childCount) {
             val child = getChildAt(i) as? TextView ?: continue
-            child.alpha = 1f
+            child.translationX = 0f
 
             ViewCompat.animate(child).cancel()
             ViewCompat.animate(child)
-//                .scaleX(1f)
-//                .scaleY(1f)
+                .scaleX(1f)
+                .scaleY(1f)
                 .alpha(1f)
                 .translationX(0f)
                 .setDuration(75)
-                .setInterpolator(LinearInterpolator())
+                .setInterpolator(OvershootInterpolator())
                 .withLayer()
                 .start()
 

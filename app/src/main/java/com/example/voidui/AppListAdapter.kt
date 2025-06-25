@@ -19,14 +19,12 @@ import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.util.Log
 import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
@@ -44,7 +42,6 @@ class AppListAdapter(
 ) : RecyclerView.Adapter<AppListAdapter.ViewHolder>() {
 
     private var newAppPackages: Set<String> = emptySet()
-    private var highlightedInitial: Char? = null
 
     companion object {
         private const val VIEW_TYPE_LIST = 0
@@ -99,78 +96,6 @@ class AppListAdapter(
     }
 
     override fun getItemCount(): Int = apps.size
-
-//    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-//        val app = apps[position]
-//        val appLabel = app.loadLabel(pm).toString()
-//        val shouldDim = highlightedInitial != null && !appLabel.startsWith(highlightedInitial!!, ignoreCase = true)
-//
-//        holder.itemView.alpha = if (shouldDim) 0.2f else 1f
-//        holder.icon.setBackgroundResource(0)
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-//            // For Android 13+ (API 33+), try to get adaptive icon
-//            val icon = pm.getApplicationIcon(app)
-//            if (icon is AdaptiveIconDrawable) {
-//                // Try to get monochrome layer
-//                val monochromeDrawable = icon.monochrome
-//                if (monochromeDrawable != null) {
-//                    val tintedIcon = monochromeDrawable.mutate()
-//                    tintedIcon.setTint(ContextCompat.getColor(context, R.color.textColorPrimary))
-//                    val layoutParams = holder.icon.layoutParams as ViewGroup.LayoutParams
-//                    layoutParams.width = 58.dp
-//                    layoutParams.height = 58.dp
-//                    holder.icon.layoutParams = layoutParams
-//                    holder.icon.setImageDrawable(tintedIcon)
-//                } else {
-//                    holder.icon.setImageDrawable(app.loadIcon(pm))
-//                }
-//            } else {
-//                holder.icon.setImageDrawable(app.loadIcon(pm))
-//            }
-//        }
-//
-////        holder.icon.setImageDrawable(app.loadIcon(pm))
-//        holder.name.text = appLabel
-//
-//        if (SharedPreferencesManager.isAppDrawerEnabled(context)) {
-//            holder.icon.visibility = View.VISIBLE
-//            if (SharedPreferencesManager.isAppNameToggleEnabled(context)) {
-//                holder.name.visibility = View.VISIBLE
-//                val layoutParams = holder.icon.layoutParams as ViewGroup.MarginLayoutParams
-//                layoutParams.topMargin = 0.dp
-//                layoutParams.bottomMargin = 0.dp
-//                holder.icon.layoutParams = layoutParams
-//            } else {
-//                holder.name.visibility = View.GONE
-//                val layoutParams = holder.icon.layoutParams as ViewGroup.MarginLayoutParams
-//                layoutParams.topMargin = 12.spToPx.pxToDp
-//                layoutParams.bottomMargin = 12.spToPx.pxToDp
-//                holder.icon.layoutParams = layoutParams
-//            }
-//        } else {
-//            holder.name.visibility = View.VISIBLE
-//            if (SharedPreferencesManager.isAppIconToggleEnabled(context)) {
-//                holder.icon.visibility = View.VISIBLE
-//            } else {
-//                holder.icon.visibility = View.GONE
-//            }
-//        }
-//
-//        if (newAppPackages.contains(app.packageName)) {
-//            holder.newAppName?.visibility = View.VISIBLE
-//        } else {
-//            holder.newAppName?.visibility = View.GONE
-//        }
-//
-//        holder.itemView.setOnLongClickListener {
-//            val clipData = ClipData.newPlainText("packageName", app.packageName)
-//            val shadow = AppIconDragShadowBuilder(context, app)
-//            it.startDragAndDrop(clipData, shadow, app, 0)
-//            onAppDragStarted?.invoke(app)
-//            true
-//        }
-//    }
 
     // Add this method to your AppListAdapter class
     private fun loadThemedIcon(app: ApplicationInfo, holder: ViewHolder) {
@@ -269,11 +194,8 @@ class AppListAdapter(
     // Update your onBindViewHolder method
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val app = apps[position]
-//        val appLabel = app.loadLabel(pm).toString()
-//        val shouldDim = highlightedInitial != null && !appLabel.startsWith(highlightedInitial!!, ignoreCase = true)
 
-//        holder.itemView.alpha = if (shouldDim) 0.2f else 1f
-        holder.name.text = app.loadLabel(pm)
+        holder.name.text = MainActivity().normalizeAppName(app.loadLabel(pm).toString())
         holder.icon.setBackgroundResource(0)
 
         // Check if themed icons are enabled (you might want to add this preference)
@@ -312,13 +234,9 @@ class AppListAdapter(
         }
     }
 
-    private val Int.dp: Int get() = (this * context.resources.displayMetrics.density).toInt()
-    private val Int.spToPx: Float get() = this * context.resources.displayMetrics.scaledDensity
-    private val Float.pxToDp: Int get() = (this / context.resources.displayMetrics.density).toInt()
-
     private fun showAppOptionsDialog(context: Context, appInfo: ApplicationInfo) {
         val packageManager = context.packageManager
-        val appName = appInfo.loadLabel(packageManager).toString()
+        val appName = MainActivity().normalizeAppName(appInfo.loadLabel(packageManager).toString())
         val appIcon = appInfo.loadIcon(packageManager)
 
         val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_app_options, null)
@@ -366,7 +284,7 @@ class AppListAdapter(
     fun addApp(app: ApplicationInfo) {
         if (apps.none { it.packageName == app.packageName }) {
             apps.add(app)
-            apps.sortBy { it.loadLabel(pm).toString().lowercase() }
+            apps.sortBy { MainActivity().normalizeAppName(it.loadLabel(pm).toString()).lowercase() }
             notifyDataSetChanged()
         }
     }
@@ -377,13 +295,8 @@ class AppListAdapter(
     }
 
     fun getApps(): List<ApplicationInfo> {
-        apps.sortBy { it.loadLabel(pm).toString().lowercase() }
+        apps.sortBy { MainActivity().normalizeAppName(it.loadLabel(pm).toString()).lowercase() }
         return apps.toList()
-    }
-
-    fun setHighlightedInitial(letter: Char?) {
-        highlightedInitial = letter
-        notifyDataSetChanged()
     }
 
 }

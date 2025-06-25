@@ -206,51 +206,9 @@ class AppDrawerAdapter(
         // Create a programmatic background if you don't have a drawable resource
         val shape = GradientDrawable()
         shape.shape = GradientDrawable.OVAL
-        shape.setColor(ContextCompat.getColor(context, R.color.themed_icon_background))
+        shape.setColor(getColor(context, R.color.themed_icon_background))
         return shape
     }
-
-//    // Update your onBindViewHolder method
-//    override fun onBindViewHolder(holder: com.example.voidui.AppListAdapter.ViewHolder, position: Int) {
-//        val app = apps[position]
-//        val appLabel = app.loadLabel(pm).toString()
-//        val shouldDim = highlightedInitial != null && !appLabel.startsWith(highlightedInitial!!, ignoreCase = true)
-//
-//        holder.itemView.alpha = if (shouldDim) 0.2f else 1f
-//        holder.icon.setBackgroundResource(0)
-//
-//        // Check if themed icons are enabled (you might want to add this preference)
-//        if (SharedPreferencesManager.isThemedIconsEnabled(context)) {
-//            loadThemedIcon(app, holder)
-//        } else {
-//            holder.icon.setImageDrawable(app.loadIcon(pm))
-//            resetIconStyling(holder)
-//        }
-//
-//        holder.name.text = appLabel
-//
-//        if (SharedPreferencesManager.isMiniAppNameToggleEnabled(context)) {
-//            holder.name.visibility = View.VISIBLE
-//            val layoutParams = holder.icon.layoutParams as ViewGroup.MarginLayoutParams
-//            layoutParams.topMargin = 0.dp
-//            layoutParams.bottomMargin = 0.dp
-//            holder.icon.layoutParams = layoutParams
-//        } else {
-//            holder.name.visibility = View.GONE
-//            val layoutParams = holder.icon.layoutParams as ViewGroup.MarginLayoutParams
-//            layoutParams.topMargin = 12.spToPx.pxToDp
-//            layoutParams.bottomMargin = 12.spToPx.pxToDp
-//            holder.icon.layoutParams = layoutParams
-//        }
-//
-//        holder.itemView.setOnLongClickListener {
-//            val clipData = ClipData.newPlainText("packageName", app.packageName)
-//            val shadow = AppIconDragShadowBuilder(context, app)
-//            it.startDragAndDrop(clipData, shadow, app, 0)
-//            onAppDragStarted?.invoke(app)
-//            true
-//        }
-//    }
 
     override fun onBindViewHolder(holder:AppDrawerAdapter.ViewHolder, position: Int) {
         val app = appList[position]
@@ -266,7 +224,7 @@ class AppDrawerAdapter(
             }
             holder.itemView.setOnLongClickListener(null)
         } else {
-            holder.name.text = app.loadLabel(pm)
+            holder.name.text = MainActivity().normalizeAppName(app.loadLabel(pm).toString())
             holder.icon.setBackgroundResource(0)
 
             // Check if themed icons are enabled (you might want to add this preference)

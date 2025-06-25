@@ -108,19 +108,19 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-//        val scroller = findViewById<AlphabetScrollerView>(R.id.alphabetScroller)
-//        val apps = listAdapter.getApps()
-//        val usedAlphabets = apps.map { it.loadLabel(packageManager).first().uppercaseChar() }.distinct().sorted()
-//        val indexMap = getAlphabetIndexMap(apps)
-//        val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-//
-//        scroller.setup(usedAlphabets, indexMap, layoutManager, bubbleBackground)
-//        scroller.onLetterSelected = { letter ->
-//            listAdapter.setHighlightedInitial(letter)
-//        }
+        if (!SharedPreferencesManager.isAppDrawerEnabled(this)) {
+            val scroller = findViewById<AlphabetScrollerView>(R.id.alphabetScroller)
+            val apps = listAdapter.getApps()
+            val usedAlphabets =
+                apps.map { normalizeAppName(it.loadLabel(packageManager).toString()).first().uppercaseChar() }.distinct()
+                    .sorted()
+            val indexMap = getAlphabetIndexMap(apps)
+            val layoutManager = recyclerView.layoutManager as LinearLayoutManager
 
-//        val fastScroll = findViewById<FastScroll>(R.id.fastScroll)
-//        fastScroll.attachToRecyclerView(recyclerView)
+//            scroller.setup(usedAlphabets, indexMap, layoutManager)
+//            scroller.enableFloatingBubble(findViewById(R.id.layoutMainActivity))
+            scroller.setup(usedAlphabets, indexMap, layoutManager, bubbleBackground)
+        }
 
         drawerRecyclerView = findViewById(R.id.appDrawerRecyclerView)
 
@@ -368,7 +368,7 @@ class MainActivity : AppCompatActivity() {
     private fun getAlphabetIndexMap(apps: List<ApplicationInfo>): Map<Char, Int> {
         val map = mutableMapOf<Char, Int>()
         for ((index, app) in apps.withIndex()) {
-            val label = app.loadLabel(packageManager).toString()
+            val label = normalizeAppName(app.loadLabel(packageManager).toString())
             val firstChar = label.firstOrNull()?.uppercaseChar() ?: continue
             if (!map.containsKey(firstChar)) {
                 map[firstChar] = index
@@ -406,7 +406,7 @@ class MainActivity : AppCompatActivity() {
             packageManager.getLaunchIntentForPackage(it.packageName) != null &&
                     it.packageName in currentDrawerList
         }.sortedBy {
-            it.loadLabel(packageManager).toString().lowercase()
+            normalizeAppName(it.loadLabel(packageManager).toString()).lowercase()
         }
 
         val newApps =
@@ -484,7 +484,7 @@ class MainActivity : AppCompatActivity() {
             .setView(dialogView)
             .setCancelable(true)
             .create()
-        val appName = appInfo.loadLabel(applicationContext.packageManager).toString()
+        val appName = normalizeAppName(appInfo.loadLabel(applicationContext.packageManager).toString())
 
         fun startTimerAndLaunchApp(minutes: Int) {
             if (minutes > 0) {
@@ -598,7 +598,7 @@ class MainActivity : AppCompatActivity() {
                 packageManager.getLaunchIntentForPackage(it.packageName) != null &&
                         it.packageName != currentPackage // exclude "Void" itself
             }
-                .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+                .sortedBy { normalizeAppName(it.loadLabel(packageManager).toString()).lowercase() }
         } else {
             for (user in users) {
                 val activities = launcherApps.getActivityList(null, user as UserHandle)
@@ -609,8 +609,22 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            return listApps.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+            return listApps.sortedBy { normalizeAppName(it.loadLabel(packageManager).toString()).lowercase() }
         }
+    }
+
+    fun normalizeAppName(label: String): String {
+        val prefixesToRemove = listOf("Samsung ", "Google ", "Galaxy ")
+        var normalized = label
+
+        for (prefix in prefixesToRemove) {
+            if (label.startsWith(prefix, ignoreCase = true)) {
+                normalized = normalized.removePrefix(prefix).trim()
+                break
+            }
+        }
+
+        return normalized
     }
 
     private fun vibratePhone(millis: Long) {

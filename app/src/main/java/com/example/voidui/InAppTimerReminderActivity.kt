@@ -100,11 +100,11 @@ class InAppTimerReminderActivity : AppCompatActivity() {
         val allApps = getAllLaunchableApps()
         val onApps = allApps.filter {
             SharedPreferencesManager.isAppTimerEnabled(this, it.packageName)
-        }.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+        }.sortedBy { MainActivity().normalizeAppName(it.loadLabel(packageManager).toString()).lowercase() }
 
         val offApps = allApps.filter {
             !SharedPreferencesManager.isAppTimerEnabled(this, it.packageName)
-        }.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+        }.sortedBy { MainActivity().normalizeAppName(it.loadLabel(packageManager).toString()).lowercase() }
 
         return onApps + offApps
     }
@@ -139,7 +139,7 @@ class InAppTimerReminderActivity : AppCompatActivity() {
                 packageManager.getLaunchIntentForPackage(it.packageName) != null &&
                         it.packageName != currentPackage // exclude "Void" itself
             }
-            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+            .sortedBy { MainActivity().normalizeAppName(it.loadLabel(packageManager).toString()).lowercase() }
     }
 
 }

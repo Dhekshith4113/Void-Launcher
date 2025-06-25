@@ -59,7 +59,7 @@ class AppAccessibilityService : AccessibilityService() {
                 } catch (e: PackageManager.NameNotFoundException) {
                     "Unknown"
                 }
-                lastForegroundApp = appName
+                lastForegroundApp = MainActivity().normalizeAppName(appName)
                 Log.d("AppAccessibilityService", "Foreground app: $appName")
             }
         }
