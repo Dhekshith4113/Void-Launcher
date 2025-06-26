@@ -700,7 +700,7 @@ class SettingsActivity : AppCompatActivity() {
             dialogView.findViewById<TextView>(R.id.countTextView).text = SharedPreferencesManager.getMiniAppDrawerCount(this).toString()
         } else {
             dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppName).visibility = View.GONE
-            dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppCount).visibility = View.VISIBLE
+            dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppCount).visibility = View.GONE
         }
 
         if (SharedPreferencesManager.getAppIconShape(this) == "round") {
@@ -757,6 +757,8 @@ class SettingsActivity : AppCompatActivity() {
             if (isChecked) {
                 dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppName).visibility = View.VISIBLE
                 dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppCount).visibility = View.VISIBLE
+                dialogView.findViewById<SwitchCompat>(R.id.miniDrawerAppNameSwitch).isChecked = SharedPreferencesManager.isShowMiniAppNameEnabled(this)
+                dialogView.findViewById<TextView>(R.id.countTextView).text = SharedPreferencesManager.getMiniAppDrawerCount(this).toString()
             } else {
                 dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppName).visibility = View.GONE
                 dialogView.findViewById<LinearLayout>(R.id.miniDrawerAppCount).visibility = View.GONE
@@ -769,7 +771,7 @@ class SettingsActivity : AppCompatActivity() {
 
         dialogView.findViewById<ImageButton>(R.id.incrementButton).setOnClickListener {
             var count = SharedPreferencesManager.getMiniAppDrawerCount(this)
-            if (count < 4) count++
+            if (count < 5) count++
             SharedPreferencesManager.setMiniAppDrawerCount(this, count)
             dialogView.findViewById<TextView>(R.id.countTextView).text = count.toString()
         }

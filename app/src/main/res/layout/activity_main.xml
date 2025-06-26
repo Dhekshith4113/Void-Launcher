@@ -9,17 +9,17 @@
     android:layout_marginBottom="50dp"
     tools:context=".MainActivity">
 
-<!--    <TextView-->
-<!--        android:id="@+id/letterBubble"-->
-<!--        android:layout_width="80dp"-->
-<!--        android:layout_height="80dp"-->
-<!--        android:gravity="center"-->
-<!--        android:background="@drawable/bubble_background"-->
-<!--        android:textSize="32sp"-->
-<!--        android:textColor="@color/textColorPrimary"-->
-<!--        android:visibility="gone"-->
-<!--        android:elevation="10dp"-->
-<!--        android:layout_gravity="center" />-->
+    <TextView
+        android:id="@+id/letterBubble"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:gravity="center"
+        android:background="@drawable/bubble_background"
+        android:textSize="32sp"
+        android:textColor="@color/textColorPrimary"
+        android:visibility="gone"
+        android:elevation="10dp"
+        android:layout_gravity="center" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -42,7 +42,7 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/appDrawerRecyclerView"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="100dp"
             android:overScrollMode="never"
             android:scrollbars="none"
             android:background="@android:color/transparent"
@@ -64,7 +64,7 @@
 
         <com.example.voidui.AlphabetScrollerView
             android:id="@+id/alphabetScroller"
-            android:layout_width="100dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="end"
             android:background="@android:color/transparent"

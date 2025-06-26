@@ -45,26 +45,40 @@ class AppDrawerAdapter(
 ) : RecyclerView.Adapter<AppDrawerAdapter.ViewHolder>() {
 
     private val drawerAppSize: Int = SharedPreferencesManager.getMiniAppDrawerCount(context)
-
     private var parent: RecyclerView? = null
+    private var spacingDecoration: CenterSpacingDecoration? = null
 
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         super.onAttachedToRecyclerView(recyclerView)
         parent = recyclerView
+
+        // Find the spacing decoration
+        for (i in 0 until recyclerView.itemDecorationCount) {
+            val decoration = recyclerView.getItemDecorationAt(i)
+            if (decoration is CenterSpacingDecoration) {
+                spacingDecoration = decoration
+                break
+            }
+        }
     }
 
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
         super.onDetachedFromRecyclerView(recyclerView)
         parent = null
+        spacingDecoration = null
     }
 
     companion object {
         const val DROP_INDICATOR_PACKAGE = "__DROP_INDICATOR__"
+        private var dropIndicatorItem: ApplicationInfo? = null
 
         fun getDropIndicatorItem(): ApplicationInfo {
-            val dummy = ApplicationInfo()
-            dummy.packageName = DROP_INDICATOR_PACKAGE
-            return dummy
+            if (dropIndicatorItem == null) {
+                dropIndicatorItem = ApplicationInfo().apply {
+                    packageName = DROP_INDICATOR_PACKAGE
+                }
+            }
+            return dropIndicatorItem!!
         }
     }
 
@@ -76,7 +90,12 @@ class AppDrawerAdapter(
 
         private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                val app = appList[adapterPosition]
+                val position = adapterPosition
+                if (position == RecyclerView.NO_POSITION || position >= appList.size) return false
+
+                val app = appList[position]
+                if (app.packageName == DROP_INDICATOR_PACKAGE) return false
+
                 val globalToggle = SharedPreferencesManager.isGlobalTimerEnabled(context)
                 val appToggle = SharedPreferencesManager.isAppToggleEnabled(context, app.packageName)
 
@@ -92,7 +111,13 @@ class AppDrawerAdapter(
             }
 
             override fun onDoubleTap(e: MotionEvent): Boolean {
-                showAppOptionsDialog(context, appList[adapterPosition])
+                val position = adapterPosition
+                if (position == RecyclerView.NO_POSITION || position >= appList.size) return false
+
+                val app = appList[position]
+                if (app.packageName != DROP_INDICATOR_PACKAGE) {
+                    showAppOptionsDialog(context, app)
+                }
                 return true
             }
         })
@@ -113,28 +138,20 @@ class AppDrawerAdapter(
     override fun getItemCount(): Int = appList.size
 
     override fun getItemViewType(position: Int): Int {
-        return if (appList[position].packageName == DROP_INDICATOR_PACKAGE) 1 else 0
+        return if (position < appList.size && appList[position].packageName == DROP_INDICATOR_PACKAGE) 1 else 0
     }
 
-    // Add this method to your AppListAdapter class
-    private fun loadThemedIcon(app: ApplicationInfo, holder: AppDrawerAdapter.ViewHolder) {
-        try {
-            // First, try to get the monochrome icon
+    private fun loadThemedIcon(app: ApplicationInfo): Drawable {
+        return try {
             val monochromeIcon = getMonochromeIcon(app)
-
             if (monochromeIcon != null) {
-                // Apply themed icon styling
-                applyThemedIconStyling(holder, monochromeIcon)
+                applyThemedIconStyling(monochromeIcon)
             } else {
                 // Fallback to regular icon
-                holder.icon.setImageDrawable(app.loadIcon(pm))
-                // Reset any previous themed styling
-                resetIconStyling(holder)
+                app.loadIcon(pm)
             }
         } catch (e: Exception) {
-            // Fallback to regular icon if anything goes wrong
-            holder.icon.setImageDrawable(app.loadIcon(pm))
-            resetIconStyling(holder)
+            app.loadIcon(pm)
         }
     }
 
@@ -142,43 +159,35 @@ class AppDrawerAdapter(
     private fun getMonochromeIcon(app: ApplicationInfo): Drawable? {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // For Android 13+ (API 33+), try to get adaptive icon
                 val icon = pm.getApplicationIcon(app)
                 if (icon is AdaptiveIconDrawable) {
-                    // Try to get monochrome layer
-                    val monochromeDrawable = icon.monochrome
-                    if (monochromeDrawable != null) {
-                        return monochromeDrawable
-                    }
-                }
+                    icon.monochrome
+                } else null
+            } else {
+                null
+            } ?: run {
+                // Fallback: Check if app has ic_launcher_monochrome drawable
+                val resources = pm.getResourcesForApplication(app)
+                val id = resources.getIdentifier("ic_launcher_monochrome", "drawable", app.packageName)
+                if (id != 0) ContextCompat.getDrawable(context, id) else null
             }
-
-            // Fallback method: try to get monochrome resource directly
-            val resources = pm.getResourcesForApplication(app)
-            val monochromeId = resources.getIdentifier("ic_launcher_monochrome", "drawable", app.packageName)
-
-            if (monochromeId != 0) {
-                return ContextCompat.getDrawable(context, monochromeId)
-            }
-
-            null
         } catch (e: Exception) {
             null
         }
     }
 
-    private fun applyThemedIconStyling(holder: AppDrawerAdapter.ViewHolder, monochromeIcon: Drawable) {
+    private fun applyThemedIconStyling(monochromeIcon: Drawable): Drawable {
         // Create a themed background
         val backgroundDrawable = if (SharedPreferencesManager.getAppIconShape(context) == "round") {
-            ContextCompat.getDrawable(context, R.drawable.themed_icon_background_rounded)?: createThemedBackground()
+            ContextCompat.getDrawable(context, R.drawable.themed_icon_background_rounded)
         } else {
-            ContextCompat.getDrawable(context, R.drawable.squricle_512_271)?: createThemedBackground()
+            ContextCompat.getDrawable(context, R.drawable.squricle_512_271)
         }
-        backgroundDrawable.setTint(getColor(context, R.color.themed_icon_background))
+        backgroundDrawable?.setTint(ContextCompat.getColor(context, R.color.themed_icon_background))
 
         // Tint the monochrome icon with your desired color
         val tintedIcon = monochromeIcon.mutate()
-        tintedIcon.setTint(getColor(context, R.color.themed_icon_foreground))
+        tintedIcon.setTint(ContextCompat.getColor(context, R.color.themed_icon_foreground))
 
         // Create layered drawable with background and scaled foreground
         val layerDrawable = LayerDrawable(arrayOf(backgroundDrawable, tintedIcon))
@@ -187,34 +196,23 @@ class AppDrawerAdapter(
         val negativePadding = (-18 * context.resources.displayMetrics.density).toInt() // -18dp
         layerDrawable.setLayerInset(1, negativePadding, negativePadding, negativePadding, negativePadding)
 
-        holder.icon.setImageDrawable(layerDrawable)
-
-        // Apply squircle corner radius to match the background
-        holder.icon.shapeAppearanceModel = ShapeAppearanceModel.builder()
-            .setAllCornerSizes(16.dp.toFloat()) // 16dp corner radius for squircle
-            .build()
+        return layerDrawable
     }
 
-    private fun resetIconStyling(holder: AppDrawerAdapter.ViewHolder) {
-        // Reset to default appearance
-        holder.icon.shapeAppearanceModel = ShapeAppearanceModel.builder()
-            .setAllCornerSizes(RelativeCornerSize(0.22f))
-            .build()
-    }
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        if (position >= appList.size) return
 
-    private fun createThemedBackground(): Drawable {
-        // Create a programmatic background if you don't have a drawable resource
-        val shape = GradientDrawable()
-        shape.shape = GradientDrawable.OVAL
-        shape.setColor(getColor(context, R.color.themed_icon_background))
-        return shape
-    }
-
-    override fun onBindViewHolder(holder:AppDrawerAdapter.ViewHolder, position: Int) {
         val app = appList[position]
+
         if (app.packageName == DROP_INDICATOR_PACKAGE) {
             holder.icon.setImageResource(0)
-            holder.icon.setBackgroundResource(R.drawable.drop_indicator)
+            if (SharedPreferencesManager.getAppIconShape(context) == "round") {
+                holder.icon.setBackgroundResource(R.drawable.drop_indicator_round)
+            } else {
+                holder.icon.setBackgroundResource(R.drawable.drop_indicator)
+            }
+            holder.name.text = ""
+
             if (SharedPreferencesManager.isShowMiniAppNameEnabled(context)) {
                 holder.name.visibility = View.VISIBLE
                 holder.miniDrawerLayout.setPadding(0, 6.dp, 0, 6.dp)
@@ -227,12 +225,10 @@ class AppDrawerAdapter(
             holder.name.text = MainActivity().normalizeAppName(app.loadLabel(pm).toString())
             holder.icon.setBackgroundResource(0)
 
-            // Check if themed icons are enabled (you might want to add this preference)
             if (SharedPreferencesManager.isThemedIconsEnabled(context)) {
-                loadThemedIcon(app, holder)
+                holder.icon.setImageDrawable(loadThemedIcon(app))
             } else {
                 holder.icon.setImageDrawable(app.loadIcon(pm))
-                resetIconStyling(holder)
             }
 
             if (SharedPreferencesManager.isShowMiniAppNameEnabled(context)) {
@@ -247,62 +243,28 @@ class AppDrawerAdapter(
                 val clipData = ClipData.newPlainText("packageName", app.packageName)
                 val shadow = View.DragShadowBuilder(it)
                 it.startDragAndDrop(clipData, shadow, app, 0)
-                onAppDragStarted?.invoke(app) // Notify removal if dragging from drawer
+                onAppDragStarted?.invoke(app)
                 true
             }
         }
     }
 
     private val Int.dp: Int get() = (this * context.resources.displayMetrics.density).toInt()
-    private val Int.spToPx: Float get() = this * context.resources.displayMetrics.scaledDensity
-    private val Float.pxToDp: Int get() = (this / context.resources.displayMetrics.density).toInt()
-
-    fun insertDropIndicator(position: Int) {
-        if (appList.any { it.packageName == DROP_INDICATOR_PACKAGE }) return
-        val dummy = ApplicationInfo().apply { packageName = DROP_INDICATOR_PACKAGE }
-        appList.add(position, dummy)
-        notifyItemInserted(position)
-    }
-
-    fun moveDropIndicator(toPosition: Int) {
-        val dropIndex = appList.indexOfFirst { it.packageName == DROP_INDICATOR_PACKAGE }
-
-        if (dropIndex == toPosition) return // already at right spot
-
-        if (dropIndex != -1) {
-            appList.removeAt(dropIndex)
-            notifyItemRemoved(dropIndex)
-        }
-
-        val safePosition = toPosition.coerceIn(0, appList.size)
-        appList.add(safePosition, getDropIndicatorItem())
-        notifyItemInserted(safePosition)
-    }
-
-    fun removeDropIndicator() {
-        val index = appList.indexOfFirst { it.packageName == DROP_INDICATOR_PACKAGE }
-        if (index != -1) {
-            appList.removeAt(index)
-            notifyItemRemoved(index)
-
-            // Force sync
-            Handler(Looper.getMainLooper()).post {
-                notifyDataSetChanged()
-            }
-        }
-    }
 
     private fun showAppOptionsDialog(context: Context, appInfo: ApplicationInfo) {
         val packageManager = context.packageManager
-        val appName = appInfo.loadLabel(packageManager).toString()
-        val appIcon = appInfo.loadIcon(packageManager)
+        val appName = MainActivity().normalizeAppName(appInfo.loadLabel(packageManager).toString())
 
         val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_app_options, null)
         val nameTextView = dialogView.findViewById<TextView>(R.id.appNameText)
         val iconImageView = dialogView.findViewById<ImageView>(R.id.appIconImage)
 
         nameTextView.text = appName
-        iconImageView.setImageDrawable(appIcon)
+        if (SharedPreferencesManager.isThemedIconsEnabled(context)) {
+            iconImageView.setImageDrawable(loadThemedIcon(appInfo))
+        } else {
+            iconImageView.setImageDrawable(appInfo.loadIcon(pm))
+        }
 
         val dialog = AlertDialog.Builder(context)
             .setView(dialogView)
@@ -331,20 +293,99 @@ class AppDrawerAdapter(
     fun updateData(newApps: MutableList<ApplicationInfo>) {
         this.appList = newApps
         notifyDataSetChanged()
+
+        // Force spacing recalculation
+        parent?.post {
+            spacingDecoration?.invalidateSpacing()
+            parent?.invalidateItemDecorations()
+        }
+    }
+
+    fun hasDropIndicator(): Boolean {
+        return appList.any { it.packageName == DROP_INDICATOR_PACKAGE }
+    }
+
+    fun insertDropIndicator(position: Int) {
+        if (hasDropIndicator()) return
+
+        val safePosition = position.coerceIn(0, appList.size)
+        appList.add(safePosition, getDropIndicatorItem())
+        notifyItemInserted(safePosition)
+
+        // Force spacing recalculation
+        parent?.post {
+            spacingDecoration?.invalidateSpacing()
+            parent?.invalidateItemDecorations()
+        }
+    }
+
+    fun moveDropIndicator(toPosition: Int) {
+        val dropIndex = appList.indexOfFirst { it.packageName == DROP_INDICATOR_PACKAGE }
+        if (dropIndex == -1) return
+
+        val safePosition = toPosition.coerceIn(0, appList.size - 1)
+        if (dropIndex == safePosition) return
+
+        // Use notifyItemMoved for smooth animation
+        appList.removeAt(dropIndex)
+        appList.add(safePosition, getDropIndicatorItem())
+        notifyItemMoved(dropIndex, safePosition)
+
+        // Force spacing recalculation after animation
+        parent?.postDelayed({
+            spacingDecoration?.invalidateSpacing()
+            parent?.invalidateItemDecorations()
+        }, 250) // Wait for animation to complete
+    }
+
+    fun removeDropIndicator() {
+        val index = appList.indexOfFirst { it.packageName == DROP_INDICATOR_PACKAGE }
+        if (index == -1) return
+
+        appList.removeAt(index)
+        notifyItemRemoved(index)
+
+        // Force spacing recalculation after removal
+        parent?.post {
+            spacingDecoration?.invalidateSpacing()
+            parent?.invalidateItemDecorations()
+        }
     }
 
     fun addAppAtPosition(app: ApplicationInfo, position: Int) {
-        if (appList.any { it.packageName == app.packageName } || appList.size >= drawerAppSize) return
-        appList.add(position.coerceIn(0, appList.size), app)
-        notifyItemInserted(position)
-        onSave(appList)
+        if (appList.any { it.packageName == app.packageName } ||
+            appList.count { it.packageName != DROP_INDICATOR_PACKAGE } >= drawerAppSize) {
+            return
+        }
+
+        val safePosition = position.coerceIn(0, appList.size)
+        appList.add(safePosition, app)
+        notifyItemInserted(safePosition)
+        onSave(appList.filter { it.packageName != DROP_INDICATOR_PACKAGE })
+
+        // Force spacing recalculation
+        parent?.post {
+            spacingDecoration?.invalidateSpacing()
+            parent?.invalidateItemDecorations()
+        }
     }
 
     fun removeApp(app: ApplicationInfo) {
-        appList.removeAll { it.packageName == app.packageName }
-        notifyDataSetChanged()
+        val indices = appList.mapIndexedNotNull { index, appInfo ->
+            if (appInfo.packageName == app.packageName) index else null
+        }
+
+        indices.reversed().forEach { index ->
+            appList.removeAt(index)
+            notifyItemRemoved(index)
+        }
+
+        // Force spacing recalculation
+        parent?.post {
+            spacingDecoration?.invalidateSpacing()
+            parent?.invalidateItemDecorations()
+        }
     }
 
-    fun getApps(): List<ApplicationInfo> = appList
-
+    fun getApps(): List<ApplicationInfo> = appList.toList()
 }

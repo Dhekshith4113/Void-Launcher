@@ -21,6 +21,7 @@ import android.view.DragEvent
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.Button
 import android.widget.EditText
@@ -35,7 +36,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlin.math.abs
 
-class MainActivity : AppCompatActivity() {
+class MainActivity: AppCompatActivity(), GradientUpdateListener {
     private lateinit var recyclerView: RecyclerView
     private lateinit var listAdapter: AppListAdapter
     private lateinit var gestureDetector: GestureDetector
@@ -46,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private var needRefresh = false
     private var toastShownThisDrag = false
     private var shouldMoveIndicator = true
+    private var gradientOverlay: GradientOverlayView? = null
 
     private val bubbleBackground by lazy {
         ContextCompat.getDrawable(this, R.drawable.bubble_background)
@@ -96,6 +98,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         recyclerView.adapter = listAdapter
+        setupGradientOverlay()
 
         listAdapter.onAppDragStarted = { app ->
             val currentApps = listAdapter.getApps()
@@ -108,21 +111,24 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        if (!SharedPreferencesManager.isAppDrawerEnabled(this)) {
-            val scroller = findViewById<AlphabetScrollerView>(R.id.alphabetScroller)
-            val apps = listAdapter.getApps()
-            val usedAlphabets =
-                apps.map { normalizeAppName(it.loadLabel(packageManager).toString()).first().uppercaseChar() }.distinct()
-                    .sorted()
-            val indexMap = getAlphabetIndexMap(apps)
-            val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+//        if (!SharedPreferencesManager.isAppDrawerEnabled(this)) {
+//            val scroller = findViewById<AlphabetScrollerView>(R.id.alphabetScroller)
+//            val apps = listAdapter.getApps()
+//            val usedAlphabets =
+//                apps.map { normalizeAppName(it.loadLabel(packageManager).toString()).first().uppercaseChar() }.distinct()
+//                    .sorted()
+//            val indexMap = getAlphabetIndexMap(apps)
+//            val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+//
+////            scroller.setup(usedAlphabets, indexMap, layoutManager)
+////            scroller.enableFloatingBubble(findViewById(R.id.layoutMainActivity))
+//            scroller.setup(usedAlphabets, indexMap, layoutManager, bubbleBackground)
+//        }
 
-//            scroller.setup(usedAlphabets, indexMap, layoutManager)
-//            scroller.enableFloatingBubble(findViewById(R.id.layoutMainActivity))
-            scroller.setup(usedAlphabets, indexMap, layoutManager, bubbleBackground)
-        }
+        setupAlphabetScroller()
 
         drawerRecyclerView = findViewById(R.id.appDrawerRecyclerView)
+        val centerSpacing = CenterSpacingDecoration()
 
         drawerRecyclerView.visibility = if (SharedPreferencesManager.isMiniDrawerEnabled(this)) {
             View.VISIBLE
@@ -137,7 +143,8 @@ class MainActivity : AppCompatActivity() {
             ::saveDrawerApps,
             refreshList = {
                 needRefresh = true
-            }) { appInfo ->
+            }
+        ) { appInfo ->
             val packageName = appInfo.packageName
             if (shouldShowTimer(this, packageName)) {
                 showTimeLimitDialog(appInfo)
@@ -147,42 +154,44 @@ class MainActivity : AppCompatActivity() {
         }
 
         drawerRecyclerView.apply {
-            drawerRecyclerView.layoutManager =
-                LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
-            drawerRecyclerView.addItemDecoration(CenterSpacingDecoration())
+            layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
+            addItemDecoration(centerSpacing)
             adapter = drawerAdapter
+//            itemAnimator = DrawerItemAnimator() // Custom animator for smooth transitions
+            itemAnimator = null // Remove animations
+
+            // Ensure proper initial layout
+            viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    post {
+                        centerSpacing.invalidateSpacing()
+                        invalidateItemDecorations()
+                    }
+                }
+            })
         }
-
-        drawerRecyclerView.itemAnimator = null
-
-        drawerRecyclerView.viewTreeObserver.addOnGlobalLayoutListener(object :
-            ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                drawerRecyclerView.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                drawerRecyclerView.invalidateItemDecorations()
-            }
-        })
 
         drawerAdapter.onAppDragStarted = { app ->
             val currentApps = drawerAdapter.getApps()
             val index = currentApps.indexOfFirst { it.packageName == app.packageName }
             if (index != -1) {
-                // Clone list to preserve order
                 val updatedList = currentApps.toMutableList()
                 updatedList.removeAt(index)
-                updatedList.add(index, AppDrawerAdapter.getDropIndicatorItem())
                 drawerAdapter.updateData(updatedList)
             }
         }
 
         drawerRecyclerView.setOnDragListener { view, event ->
             when (event.action) {
+                DragEvent.ACTION_DRAG_STARTED -> {
+                    toastShownThisDrag = false
+                    shouldMoveIndicator = true
+                    true
+                }
 
                 DragEvent.ACTION_DRAG_ENTERED -> {
-                    // Only insert if not already inserted
-                    if (!drawerAdapter.getApps()
-                            .any { it.packageName == AppDrawerAdapter.DROP_INDICATOR_PACKAGE }
-                    ) {
+                    if (!drawerAdapter.hasDropIndicator()) {
                         drawerAdapter.insertDropIndicator(0)
                     }
                     true
@@ -190,44 +199,97 @@ class MainActivity : AppCompatActivity() {
 
                 DragEvent.ACTION_DRAG_LOCATION -> {
                     val x = event.x.toInt()
+                    val y = event.y.toInt()
                     val recyclerView = view as RecyclerView
                     val draggedApp = event.localState as ApplicationInfo
-                    val isAppFromDrawer = !listAdapter.getApps().contains(draggedApp)
+                    val isAppFromDrawer = drawerAdapter.getApps().any { it.packageName == draggedApp.packageName }
                     val drawerSize = SharedPreferencesManager.getMiniAppDrawerCount(this)
-                    if (!isAppFromDrawer && (drawerAdapter.getApps().size >= drawerSize + 1)) {
+                    val currentRealApps = drawerAdapter.getApps().count { it.packageName != AppDrawerAdapter.DROP_INDICATOR_PACKAGE }
+
+                    // Check if we can add more apps
+                    if (!isAppFromDrawer && currentRealApps >= drawerSize) {
                         if (!toastShownThisDrag) {
-                            drawerAdapter.removeDropIndicator()
-                            Toast.makeText(
-                                this,
-                                "Cannot add more than $drawerSize apps",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Toast.makeText(this, "Cannot add more than $drawerSize apps", Toast.LENGTH_SHORT).show()
                             shouldMoveIndicator = false
                             toastShownThisDrag = true
                         }
                         return@setOnDragListener true
                     }
 
-                    var targetPos = -1
-                    // Find the hovered child
+                    if (!shouldMoveIndicator) return@setOnDragListener true
+
+                    // Find which child view is being directly hovered over
+                    var hoveredChild: View? = null
+                    var hoveredPosition = -1
+
                     for (i in 0 until recyclerView.childCount) {
                         val child = recyclerView.getChildAt(i)
-                        val left = child.left
-                        val right = child.right
 
-                        if (x in left..right) {
-                            targetPos = recyclerView.getChildAdapterPosition(child)
+                        // Check if drag point is within the bounds of this child
+                        if (x >= child.left && x <= child.right &&
+                            y >= child.top && y <= child.bottom) {
+                            hoveredChild = child
+                            hoveredPosition = recyclerView.getChildAdapterPosition(child)
                             break
                         }
                     }
 
-                    if (targetPos != -1) {
-                        // Only move if we're not already at that position
-                        val currentDropIndex = drawerAdapter.getApps().indexOfFirst {
-                            it.packageName == AppDrawerAdapter.DROP_INDICATOR_PACKAGE
+                    val currentDropIndex = drawerAdapter.getApps().indexOfFirst {
+                        it.packageName == AppDrawerAdapter.DROP_INDICATOR_PACKAGE
+                    }
+
+                    if (hoveredChild != null && hoveredPosition != -1 && hoveredPosition < drawerAdapter.getApps().size) {
+                        // We're directly hovering over a specific child
+                        val hoveredApp = drawerAdapter.getApps()[hoveredPosition]
+
+                        if (hoveredApp.packageName == AppDrawerAdapter.DROP_INDICATOR_PACKAGE) {
+                            // Hovering over drop indicator - don't move it
+                            return@setOnDragListener true
                         }
-                        if (currentDropIndex != targetPos && shouldMoveIndicator) {
-                            drawerAdapter.moveDropIndicator(targetPos)
+
+                        // We're hovering over a real app - determine where to place drop indicator
+                        val targetPos = if (currentDropIndex == -1) {
+                            // No drop indicator yet, place it based on drag direction
+                            if (x < hoveredChild.left + hoveredChild.width / 2) {
+                                hoveredPosition // Place before the hovered app
+                            } else {
+                                hoveredPosition + 1 // Place after the hovered app
+                            }
+                        } else {
+                            // Drop indicator exists, move it to the opposite side of hovered app
+                            if (currentDropIndex < hoveredPosition) {
+                                // Drop indicator is to the left, move it to the right
+                                hoveredPosition + 1
+                            } else if (currentDropIndex > hoveredPosition) {
+                                // Drop indicator is to the right, move it to the left
+                                hoveredPosition
+                            } else {
+                                // Don't move if already adjacent
+                                return@setOnDragListener true
+                            }
+                        }
+
+                        val safeTargetPos = targetPos.coerceIn(0, drawerAdapter.itemCount)
+                        if (currentDropIndex != safeTargetPos) {
+                            if (currentDropIndex == -1) {
+                                drawerAdapter.insertDropIndicator(safeTargetPos)
+                            } else {
+                                drawerAdapter.moveDropIndicator(safeTargetPos)
+                            }
+                        }
+                    } else {
+                        // Not hovering over any specific child
+                        // Only insert drop indicator if it doesn't exist, at the edges
+                        if (currentDropIndex == -1) {
+                            val targetPos = if (x < recyclerView.width / 3) {
+                                0 // Left edge
+                            } else if (x > recyclerView.width * 2 / 3) {
+                                drawerAdapter.itemCount // Right edge
+                            } else {
+                                // Middle area - don't insert drop indicator
+                                return@setOnDragListener true
+                            }
+                            drawerAdapter.insertDropIndicator(targetPos)
                         }
                     }
                     true
@@ -241,31 +303,37 @@ class MainActivity : AppCompatActivity() {
 
                     drawerAdapter.removeDropIndicator()
 
-                    // Check if app was already in the drawer
-                    val isAppFromDrawer = !listAdapter.getApps().contains(draggedApp)
+                    val isAppFromDrawer = drawerAdapter.getApps().any { it.packageName == draggedApp.packageName }
+                    val drawerSize = SharedPreferencesManager.getMiniAppDrawerCount(this)
+                    val currentRealApps = drawerAdapter.getApps().count { it.packageName != AppDrawerAdapter.DROP_INDICATOR_PACKAGE }
+
                     if (view == drawerRecyclerView) {
-                        // Reorder or return to drawer
-                        val drawerSize = SharedPreferencesManager.getMiniAppDrawerCount(this)
-                        if (!isAppFromDrawer && drawerAdapter.getApps().size >= drawerSize) {
+                        if (!isAppFromDrawer && currentRealApps >= drawerSize) {
+                            // Can't add more apps
                             return@setOnDragListener true
                         } else {
                             if (!isAppFromDrawer) {
-                                // Moved from list to drawer
+                                // Moving from list to drawer
                                 listAdapter.removeApp(draggedApp)
                             }
                             drawerAdapter.addAppAtPosition(draggedApp, dropIndex)
                         }
                     } else {
-                        // Dropped into main app list, remove from drawer
+                        // Dropped into main app list
                         if (isAppFromDrawer) {
                             drawerAdapter.removeApp(draggedApp)
                             listAdapter.addApp(draggedApp)
                         }
                     }
 
-                    saveDrawerApps(drawerAdapter.getApps())
+                    saveDrawerApps(drawerAdapter.getApps().filter { it.packageName != AppDrawerAdapter.DROP_INDICATOR_PACKAGE })
                     saveListApps(listAdapter.getApps())
-                    drawerRecyclerView.invalidateItemDecorations()
+
+                    // Force layout refresh
+                    drawerRecyclerView.post {
+                        centerSpacing.invalidateSpacing()
+                        drawerRecyclerView.invalidateItemDecorations()
+                    }
                     true
                 }
 
@@ -282,16 +350,14 @@ class MainActivity : AppCompatActivity() {
 
         recyclerView.setOnDragListener { _, event ->
             when (event.action) {
-
                 DragEvent.ACTION_DROP -> {
                     val app = event.localState as ApplicationInfo
                     drawerAdapter.removeApp(app)
                     listAdapter.addApp(app)
-                    saveDrawerApps(drawerAdapter.getApps())
+                    saveDrawerApps(drawerAdapter.getApps().filter { it.packageName != AppDrawerAdapter.DROP_INDICATOR_PACKAGE })
                     saveListApps(listAdapter.getApps())
                     true
                 }
-
                 else -> true
             }
         }
@@ -346,6 +412,27 @@ class MainActivity : AppCompatActivity() {
 //            startActivity(Intent(this, DefaultLauncherActivity::class.java))
 //        }
         if (SharedPreferencesManager.isRefreshViewEnabled(this)) {
+            if (!SharedPreferencesManager.isMiniDrawerEnabled(this)) {
+                for (app in loadDrawerApps()) {
+                    listAdapter.addApp(app)
+                }
+                saveListApps(listAdapter.getApps())
+            } else{
+                for (app in loadDrawerApps()) {
+                    listAdapter.removeApp(app)
+                }
+                saveListApps(listAdapter.getApps())
+            }
+            val miniAppDrawerCount = SharedPreferencesManager.getMiniAppDrawerCount(this)
+            if (miniAppDrawerCount < drawerAdapter.getApps().size) {
+                for (i in 0 until drawerAdapter.getApps().size - miniAppDrawerCount) {
+                    val extraApp = loadDrawerApps().last()
+                    drawerAdapter.removeApp(extraApp)
+                    listAdapter.addApp(extraApp)
+                    saveDrawerApps(drawerAdapter.getApps())
+                    saveListApps(listAdapter.getApps())
+                }
+            }
             finish()
             startActivity(Intent(this, MainActivity::class.java))
             SharedPreferencesManager.setRefreshViewEnabled(this, false)
@@ -363,6 +450,124 @@ class MainActivity : AppCompatActivity() {
         } else {
             Toast.makeText(this, "Notification permission denied", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    override fun updateGradients() {
+        updateGradientAlphas()
+    }
+
+    private fun setupAlphabetScroller() {
+        if (!SharedPreferencesManager.isAppDrawerEnabled(this)) {
+            val scroller = findViewById<AlphabetScrollerView>(R.id.alphabetScroller)
+            val apps = listAdapter.getApps()
+            val usedAlphabets = apps.map {
+                normalizeAppName(it.loadLabel(packageManager).toString()).first().uppercaseChar()
+            }.distinct().sorted()
+            val indexMap = getAlphabetIndexMap(apps)
+            val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+
+//            scroller.setup(usedAlphabets, indexMap, layoutManager, bubbleBackground)
+
+            scroller.setup(usedAlphabets, indexMap, layoutManager)
+            scroller.enableFloatingBubble(findViewById(R.id.layoutMainActivity))
+            scroller.setGradientUpdateListener(this)   // IMPORTANT: Set the gradient update listener
+        }
+    }
+
+    private fun setupGradientOverlay() {
+        // Create gradient overlay
+        gradientOverlay = GradientOverlayView(this)
+
+        // Get RecyclerView's parent to add overlay
+        val recyclerViewParent = recyclerView.parent as ViewGroup
+
+        // Create overlay params matching RecyclerView's layout params
+        val recyclerViewParams = recyclerView.layoutParams
+        val overlayParams = ViewGroup.LayoutParams(
+            recyclerViewParams.width,
+            recyclerViewParams.height
+        )
+
+        // Position overlay to match RecyclerView exactly
+        if (overlayParams.width == ViewGroup.LayoutParams.MATCH_PARENT) {
+            overlayParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+        }
+        if (overlayParams.height == ViewGroup.LayoutParams.MATCH_PARENT) {
+            overlayParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+        }
+
+        // Add gradient overlay as the last child so it appears on top of RecyclerView
+        recyclerViewParent.addView(gradientOverlay, overlayParams)
+
+        // Position the overlay exactly over the RecyclerView
+        gradientOverlay?.post {
+            gradientOverlay?.let { overlay ->
+                overlay.x = recyclerView.x
+                overlay.y = recyclerView.y
+                overlay.layoutParams.width = recyclerView.width
+                overlay.layoutParams.height = recyclerView.height
+            }
+        }
+
+        // Set up scroll listener for smooth gradient updates
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                updateGradientAlphas()
+            }
+        })
+
+        // Initial gradient state
+        updateGradientAlphas()
+    }
+
+    private fun updateGradientAlphas() {
+        val (topAlpha, bottomAlpha) = recyclerView.calculateGradientAlphas()
+        gradientOverlay?.updateGradients(topAlpha, bottomAlpha)
+    }
+
+    fun RecyclerView.calculateGradientAlphas(): Pair<Float, Float> {
+        val layoutManager = this.layoutManager as? LinearLayoutManager ?: return 0f to 1f
+
+        // Check if we can scroll up (not at top)
+        val canScrollUp = canScrollVertically(-1)
+
+        // Check if we can scroll down (not at bottom)
+        val canScrollDown = canScrollVertically(1)
+
+        // Calculate precise scroll position
+        val firstVisiblePosition = layoutManager.findFirstVisibleItemPosition()
+        val firstVisibleView = layoutManager.findViewByPosition(firstVisiblePosition)
+
+        val topAlpha = when {
+            !canScrollUp -> 0f // At the very top
+            firstVisiblePosition == 0 && firstVisibleView != null -> {
+                // Near top, calculate based on first item offset
+                val offset = firstVisibleView.top
+                val viewHeight = firstVisibleView.height
+                if (offset >= 0) 0f else (-offset.toFloat() / (viewHeight * 0.5f)).coerceIn(0f, 1f)
+            }
+            else -> 1f // Scrolled down significantly
+        }
+
+        val bottomAlpha = when {
+            !canScrollDown -> 0f // At the very bottom
+            else -> {
+                // Calculate based on how close we are to bottom
+                val lastVisiblePosition = layoutManager.findLastVisibleItemPosition()
+                val itemCount = layoutManager.itemCount
+                val lastVisibleView = layoutManager.findViewByPosition(lastVisiblePosition)
+
+                if (lastVisiblePosition == itemCount - 1 && lastVisibleView != null) {
+                    // Near bottom, calculate based on last item offset
+                    val offset = lastVisibleView.bottom - height
+                    val viewHeight = lastVisibleView.height
+                    if (offset <= 0) 0f else (offset.toFloat() / (viewHeight * 0.5f)).coerceIn(0f, 1f)
+                } else 1f
+            }
+        }
+
+        return topAlpha to bottomAlpha
     }
 
     private fun getAlphabetIndexMap(apps: List<ApplicationInfo>): Map<Char, Int> {
@@ -719,4 +924,8 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent(this, SettingsActivity::class.java))
     }
 
+}
+
+interface GradientUpdateListener {
+    fun updateGradients()
 }

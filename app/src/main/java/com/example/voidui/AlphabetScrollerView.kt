@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.LinearInterpolator
 import android.view.animation.OvershootInterpolator
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
@@ -30,12 +31,20 @@ class AlphabetScrollerView @JvmOverloads constructor(
     private var lastIndex = -1
     private var bubbleBackground: Drawable? = null
     private var layoutManager: LinearLayoutManager? = null
-//    private var floatingBubble: TextView? = null
-//    private var rootOverlay: ViewGroup? = null
+    private var floatingBubble: TextView? = null
+    private var rootOverlay: ViewGroup? = null
+
+    // Add this property for gradient updates
+    private var gradientUpdateListener: GradientUpdateListener? = null
 
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER
+    }
+
+    // Add this setter method
+    fun setGradientUpdateListener(listener: GradientUpdateListener) {
+        this.gradientUpdateListener = listener
     }
 
     fun setup(
@@ -49,6 +58,22 @@ class AlphabetScrollerView @JvmOverloads constructor(
         this.layoutManager = recyclerLayoutManager
         this.bubbleBackground = bubbleBackground
         refreshLetters()
+    }
+
+    fun enableFloatingBubble(bubbleParent: ViewGroup) {
+        rootOverlay = bubbleParent
+        floatingBubble = TextView(context).apply {
+            layoutParams = LayoutParams(32.dp, 32.dp).apply {
+                gravity = Gravity.TOP or Gravity.START
+            }
+            background = AppCompatResources.getDrawable(context, R.drawable.bubble_background)
+            gravity = Gravity.CENTER
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            visibility = View.GONE
+            elevation = 20f
+        }
+        rootOverlay?.addView(floatingBubble)
     }
 
     private fun refreshLetters() {
@@ -72,6 +97,35 @@ class AlphabetScrollerView @JvmOverloads constructor(
         }
     }
 
+//    @SuppressLint("ClickableViewAccessibility")
+//    override fun onTouchEvent(event: MotionEvent): Boolean {
+//        when (event.action) {
+//            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+//                val itemHeight = height / usedAlphabets.size
+//                val index = (event.y / itemHeight).toInt().coerceIn(0, usedAlphabets.size - 1)
+//                val selectedChar = usedAlphabets[index]
+//
+//                if (index != lastIndex) {
+//                    indexMap[selectedChar]?.let { position ->
+//                        layoutManager?.scrollToPositionWithOffset(position, 0)
+//
+//                        // Trigger gradient update after alphabet scroll
+//                        post {
+//                            gradientUpdateListener?.updateGradients()
+//                        }
+//                    }
+//                    staticScroll(index)
+//                }
+//                lastIndex = index
+//            }
+//            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+//                staticScrollReset()
+//                lastIndex = -1
+//            }
+//        }
+//        return true
+//    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
@@ -80,8 +134,15 @@ class AlphabetScrollerView @JvmOverloads constructor(
                 val index = (event.y / itemHeight).toInt().coerceIn(0, usedAlphabets.size - 1)
                 val selectedChar = usedAlphabets[index]
                 if (index != lastIndex) {
-                    indexMap[selectedChar]?.let { layoutManager?.scrollToPositionWithOffset(it, 0) }
-                    staticScroll(index)                      // STATIC SCROLL BAR WITH AN INDICATOR
+                    indexMap[selectedChar]?.let {
+                        layoutManager?.scrollToPositionWithOffset(it, 0)
+
+                        post {
+                            gradientUpdateListener?.updateGradients()
+                        }
+                    }
+
+//                    staticScroll(index)                      // STATIC SCROLL BAR WITH AN INDICATOR
 //                    staticAnimatedScroll(index)              // STATIC ANIMATED SCROLL BAR WITH AN INDICATOR
 //                    dynamicBendingScroll(index)              // DYNAMIC BENDING SCROLL BAR WITH AN INDICATOR
 //                    dynamicAnimatedBendingScroll(index)      // DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR
@@ -90,26 +151,26 @@ class AlphabetScrollerView @JvmOverloads constructor(
                 }
                 lastIndex = index
 
-//                floatingBubble?.let { bubble ->
-//                    bubble.text = selectedChar.toString()
-//                    bubble.visibility = View.VISIBLE
-//
-//                    // Calculate Y position based on raw touch
-//                    val y = event.rawY - bubble.height * 1.5f
-//
-//                    // Calculate X position so it appears to the *left* of AlphabetScrollerView
-//                    val location = IntArray(2)
-//                    getLocationOnScreen(location)
-//                    val alphabetScrollerX = location[0]
-//                    val bubbleX = alphabetScrollerX - bubble.width - 24.dp
-//
-//                    bubble.x = bubbleX.toFloat()
-//                    bubble.y = y
-//                }
+                floatingBubble?.let { bubble ->
+                    bubble.text = selectedChar.toString()
+                    bubble.visibility = View.VISIBLE
+
+                    // Calculate Y position based on raw touch
+                    val y = event.rawY - bubble.height * 1.5f
+
+                    // Calculate X position so it appears to the *left* of AlphabetScrollerView
+                    val location = IntArray(2)
+                    getLocationOnScreen(location)
+                    val alphabetScrollerX = location[0]
+                    val bubbleX = alphabetScrollerX - bubble.width - 24.dp
+
+                    bubble.x = bubbleX.toFloat()
+                    bubble.y = y
+                }
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                staticScrollReset()                       // STATIC SCROLL BAR WITH AN INDICATOR
+//                staticScrollReset()                       // STATIC SCROLL BAR WITH AN INDICATOR
 //                staticAnimatedScrollReset()                 // STATIC ANIMATED SCROLL BAR WITH AN INDICATOR
 //                dynamicBendingScrollReset()               // DYNAMIC BENDING SCROLL BAR WITH AN INDICATOR
 //                dynamicAnimatedBendingScrollReset()       // DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR
@@ -117,7 +178,7 @@ class AlphabetScrollerView @JvmOverloads constructor(
 //                newDynamicAnimatedBellCurveScrollReset()  // DYNAMIC ANIMATED BENDING SCROLL BAR WITH AN INDICATOR (BELL CURVE METHOD FOR BENDING AND BETTER PERFORMANCE)
 
                 lastIndex = -1
-//                floatingBubble?.visibility = View.GONE
+                floatingBubble?.visibility = View.GONE
             }
         }
         return true
@@ -374,22 +435,6 @@ class AlphabetScrollerView @JvmOverloads constructor(
             child.background = null
         }
     }
-
-//    fun enableFloatingBubble(bubbleParent: ViewGroup) {
-//        rootOverlay = bubbleParent
-//        floatingBubble = TextView(context).apply {
-//            layoutParams = LayoutParams(32.dp, 32.dp).apply {
-//                gravity = Gravity.TOP or Gravity.START
-//            }
-//            background = AppCompatResources.getDrawable(context, R.drawable.bubble_background)
-//            gravity = Gravity.CENTER
-//            textSize = 14f
-//            setTextColor(Color.WHITE)
-//            visibility = View.GONE
-//            elevation = 20f
-//        }
-//        rootOverlay?.addView(floatingBubble)
-//    }
 
     private val Int.dp: Int get() = (this * context.resources.displayMetrics.density).toInt()
 }
