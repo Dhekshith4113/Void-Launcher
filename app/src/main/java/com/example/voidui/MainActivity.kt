@@ -25,6 +25,7 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
@@ -474,40 +475,85 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
         }
     }
 
+//    private fun setupGradientOverlay() {
+//        // Create gradient overlay
+//        gradientOverlay = GradientOverlayView(this)
+//
+//        // Get RecyclerView's parent to add overlay
+//        val recyclerViewParent = recyclerView.parent as ViewGroup
+//
+//        // Create overlay params matching RecyclerView's layout params
+//        val recyclerViewParams = recyclerView.layoutParams
+//        val overlayParams = ViewGroup.LayoutParams(
+//            recyclerViewParams.width,
+//            recyclerViewParams.height
+//        )
+//
+//        // Position overlay to match RecyclerView exactly
+//        if (overlayParams.width == ViewGroup.LayoutParams.MATCH_PARENT) {
+//            overlayParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+//        }
+//        if (overlayParams.height == ViewGroup.LayoutParams.MATCH_PARENT) {
+//            overlayParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+//        }
+//
+//        // Add gradient overlay as the last child so it appears on top of RecyclerView
+//        recyclerViewParent.addView(gradientOverlay, overlayParams)
+//
+//        // Position the overlay exactly over the RecyclerView
+//        gradientOverlay?.post {
+//            gradientOverlay?.let { overlay ->
+//                overlay.x = recyclerView.x
+//                overlay.y = recyclerView.y
+//                overlay.layoutParams.width = recyclerView.width
+//                overlay.layoutParams.height = recyclerView.height
+//            }
+//        }
+//
+//        // Set up scroll listener for smooth gradient updates
+//        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+//            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+//                super.onScrolled(recyclerView, dx, dy)
+//                updateGradientAlphas()
+//            }
+//        })
+//
+//        // Initial gradient state
+//        updateGradientAlphas()
+//    }
+
     private fun setupGradientOverlay() {
         // Create gradient overlay
         gradientOverlay = GradientOverlayView(this)
 
-        // Get RecyclerView's parent to add overlay
-        val recyclerViewParent = recyclerView.parent as ViewGroup
-
-        // Create overlay params matching RecyclerView's layout params
+        // Get RecyclerView's current parent and position
+        val currentParent = recyclerView.parent as ViewGroup
+        val recyclerViewIndex = currentParent.indexOfChild(recyclerView)
         val recyclerViewParams = recyclerView.layoutParams
-        val overlayParams = ViewGroup.LayoutParams(
-            recyclerViewParams.width,
-            recyclerViewParams.height
+
+        // Remove RecyclerView from its current parent
+        currentParent.removeView(recyclerView)
+
+        // Create a FrameLayout container
+        val frameContainer = FrameLayout(this)
+        frameContainer.layoutParams = recyclerViewParams
+
+        // Add RecyclerView to FrameLayout with MATCH_PARENT params
+        val recyclerParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
         )
+        frameContainer.addView(recyclerView, recyclerParams)
 
-        // Position overlay to match RecyclerView exactly
-        if (overlayParams.width == ViewGroup.LayoutParams.MATCH_PARENT) {
-            overlayParams.width = ViewGroup.LayoutParams.MATCH_PARENT
-        }
-        if (overlayParams.height == ViewGroup.LayoutParams.MATCH_PARENT) {
-            overlayParams.height = ViewGroup.LayoutParams.MATCH_PARENT
-        }
+        // Add gradient overlay to FrameLayout (on top of RecyclerView)
+        val overlayParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        )
+        frameContainer.addView(gradientOverlay, overlayParams)
 
-        // Add gradient overlay as the last child so it appears on top of RecyclerView
-        recyclerViewParent.addView(gradientOverlay, overlayParams)
-
-        // Position the overlay exactly over the RecyclerView
-        gradientOverlay?.post {
-            gradientOverlay?.let { overlay ->
-                overlay.x = recyclerView.x
-                overlay.y = recyclerView.y
-                overlay.layoutParams.width = recyclerView.width
-                overlay.layoutParams.height = recyclerView.height
-            }
-        }
+        // Add the FrameLayout container back to the original parent
+        currentParent.addView(frameContainer, recyclerViewIndex)
 
         // Set up scroll listener for smooth gradient updates
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {

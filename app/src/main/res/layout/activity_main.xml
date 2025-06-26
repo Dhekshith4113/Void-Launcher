@@ -57,10 +57,10 @@
             android:layout_height="48dp"
             android:background="@android:color/transparent"
             android:contentDescription="Settings"
-            app:layout_constraintBottom_toBottomOf="@+id/recyclerView"
-            app:layout_constraintEnd_toEndOf="parent"
             app:srcCompat="@drawable/settings_24px"
-            app:tint="@color/textColorPrimary" />
+            app:tint="@color/textColorPrimary"
+            app:layout_constraintTop_toTopOf="@+id/appDrawerRecyclerView"
+            app:layout_constraintEnd_toEndOf="parent"/>
 
         <com.example.voidui.AlphabetScrollerView
             android:id="@+id/alphabetScroller"
@@ -70,7 +70,7 @@
             android:background="@android:color/transparent"
             android:orientation="vertical"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="@+id/recyclerView"
+            app:layout_constraintBottom_toTopOf="@+id/appDrawerRecyclerView"
             app:layout_constraintEnd_toEndOf="parent"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
