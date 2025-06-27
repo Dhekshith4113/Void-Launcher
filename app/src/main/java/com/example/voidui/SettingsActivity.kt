@@ -193,7 +193,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         listView.adapter = adapter
 
-        val snackBar = Snackbar.make(listView, "Version 1.1", Snackbar.LENGTH_SHORT)
+        val snackBar = Snackbar.make(listView, "Version 1.8", Snackbar.LENGTH_SHORT)
         val textView =
             snackBar.view.findViewById<TextView>(com.google.android.material.R.id.snackbar_text)
         textView.setTextColor(ContextCompat.getColor(this, R.color.backgroundColor))
@@ -568,7 +568,7 @@ class SettingsActivity : AppCompatActivity() {
             .setCancelable(true)
             .create()
 
-        val settingsSwitch = dialogView.findViewById<SwitchCompat>(R.id.settingsSwitch)
+//        val settingsSwitch = dialogView.findViewById<SwitchCompat>(R.id.settingsSwitch)
         lockSwitch = dialogView.findViewById(R.id.lockSwitch)
         doubleTapSwitch = dialogView.findViewById(R.id.doubleTapSwitch)
 
@@ -579,23 +579,23 @@ class SettingsActivity : AppCompatActivity() {
 
         lockSwitch?.isChecked = SharedPreferencesManager.isSwipeToLockEnabled(this)
         doubleTapSwitch?.isChecked = SharedPreferencesManager.isDoubleTapToLockEnabled(this)
-        settingsSwitch.isChecked = SharedPreferencesManager.isSwipeToSettingsEnabled(this)
+//        settingsSwitch.isChecked = SharedPreferencesManager.isSwipeToSettingsEnabled(this)
 
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
-        settingsSwitch.setOnCheckedChangeListener { _, isChecked ->
-            SharedPreferencesManager.setSwipeToSettingsEnabled(this, isChecked)
-            if (isChecked) {
-                Toast.makeText(this, "'Swipe left to open settings' is enabled", Toast.LENGTH_SHORT)
-                    .show()
-            } else {
-                Toast.makeText(
-                    this,
-                    "'Swipe left to open settings' is disabled",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
+//        settingsSwitch.setOnCheckedChangeListener { _, isChecked ->
+//            SharedPreferencesManager.setSwipeToSettingsEnabled(this, isChecked)
+//            if (isChecked) {
+//                Toast.makeText(this, "'Swipe left to open settings' is enabled", Toast.LENGTH_SHORT)
+//                    .show()
+//            } else {
+//                Toast.makeText(
+//                    this,
+//                    "'Swipe left to open settings' is disabled",
+//                    Toast.LENGTH_SHORT
+//                ).show()
+//            }
+//        }
 
         lockSwitch?.setOnCheckedChangeListener { _, isChecked ->
             SharedPreferencesManager.setSwipeToLockEnabled(this, isChecked)

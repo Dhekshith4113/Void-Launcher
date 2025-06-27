@@ -28,6 +28,8 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.imageview.ShapeableImageView
+import com.google.android.material.shape.RelativeCornerSize
+import com.google.android.material.shape.ShapeAppearanceModel
 
 class AppListAdapter(
     private val context: Context,
@@ -161,7 +163,14 @@ class AppListAdapter(
         if (SharedPreferencesManager.isThemedIconsEnabled(context)) {
             holder.icon.setImageDrawable(loadThemedIcon(app))
         } else {
-            holder.icon.setImageDrawable(app.loadIcon(pm))
+            if (SharedPreferencesManager.getAppIconShape(context) == "round") {
+                holder.icon.setImageDrawable(app.loadIcon(pm))
+                holder.icon.shapeAppearanceModel = ShapeAppearanceModel.builder()
+                    .setAllCornerSizes(RelativeCornerSize(0.53f))
+                    .build()
+            } else {
+                holder.icon.setImageDrawable(app.loadIcon(pm))
+            }
         }
 
         if (SharedPreferencesManager.isAppDrawerEnabled(context)) {

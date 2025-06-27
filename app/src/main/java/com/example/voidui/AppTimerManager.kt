@@ -1,8 +1,11 @@
 package com.example.voidui
 
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentSkipListSet
+
 object AppTimerManager {
-    private val appTimers = mutableMapOf<String, Long>()
-    private val expiredFlags = mutableSetOf<String>()
+    private val appTimers = ConcurrentHashMap<String, Long>()
+    private val expiredFlags = ConcurrentSkipListSet<String>()
 
     fun setTimer(appName: String, endTimeMillisFromNow: Long) {
         appTimers[appName] = System.currentTimeMillis() + endTimeMillisFromNow
@@ -15,6 +18,11 @@ object AppTimerManager {
 
     fun clearTimer(appName: String) {
         appTimers.remove(appName)
+        expiredFlags.remove(appName)
+    }
+
+    fun hasTimer(appName: String): Boolean {
+        return appTimers.containsKey(appName)
     }
 
     fun isExpired(appName: String): Boolean {

@@ -18,17 +18,6 @@
         app:layout_constraintTop_toTopOf="@+id/lockSwitch" />
 
     <TextView
-        android:id="@+id/swipeToSettings"
-        style="@style/AppBaseText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="18dp"
-        android:text="Swipe left to open settings"
-        app:layout_constraintBottom_toBottomOf="@+id/settingsSwitch"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/settingsSwitch" />
-
-    <TextView
         android:id="@+id/doubleTapToLock"
         style="@style/AppBaseText"
         android:layout_width="wrap_content"
@@ -45,17 +34,6 @@
         android:layout_marginStart="18dp"
         android:layout_marginEnd="18dp"
         android:background="@color/divider_grey"
-        app:layout_constraintBottom_toTopOf="@+id/settingsSwitch"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/lockSwitch" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginStart="18dp"
-        android:layout_marginEnd="18dp"
-        android:background="@color/divider_grey"
         app:layout_constraintBottom_toTopOf="@+id/doubleTapSwitch"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -63,15 +41,6 @@
 
     <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/lockSwitch"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="18dp"
-        android:layout_marginEnd="18dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/settingsSwitch" />
-
-    <androidx.appcompat.widget.SwitchCompat
-        android:id="@+id/settingsSwitch"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="18dp"

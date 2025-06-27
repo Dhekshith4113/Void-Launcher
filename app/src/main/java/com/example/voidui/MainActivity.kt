@@ -717,7 +717,8 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
 
     private fun shouldShowTimer(context: Context, packageName: String): Boolean {
         return SharedPreferencesManager.isGlobalTimerEnabled(context) &&
-                SharedPreferencesManager.isAppTimerEnabled(context, packageName)
+                SharedPreferencesManager.isAppTimerEnabled(context, packageName) &&
+                AppAccessibilityService.isAccessibilityServiceEnabled()
     }
 
     private fun launchAppDirectly(appInfo: ApplicationInfo) {
@@ -934,15 +935,16 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
             ) {
                 if (diffX < 0 && e1.x > screenWidth - edgeSwipeThreshold) {
                     // Swiped left (right → left)
-                    if (SharedPreferencesManager.isSwipeToSettingsEnabled(this@MainActivity)) {
-                        openSettings()
-                    } else {
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Enable 'Swipe left to open settings' in Gestures",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+//                    if (SharedPreferencesManager.isSwipeToSettingsEnabled(this@MainActivity)) {
+//                        openSettings()
+//                    } else {
+//                        Toast.makeText(
+//                            this@MainActivity,
+//                            "Enable 'Swipe left to open settings' in Gestures",
+//                            Toast.LENGTH_SHORT
+//                        ).show()
+//                    }
+                    openSettings()
                     return true
                 }
 

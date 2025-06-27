@@ -29,6 +29,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getColor
+import androidx.core.content.ContextCompat.getDrawable
+import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.shape.RelativeCornerSize
@@ -179,15 +181,15 @@ class AppDrawerAdapter(
     private fun applyThemedIconStyling(monochromeIcon: Drawable): Drawable {
         // Create a themed background
         val backgroundDrawable = if (SharedPreferencesManager.getAppIconShape(context) == "round") {
-            ContextCompat.getDrawable(context, R.drawable.themed_icon_background_rounded)
+            getDrawable(context, R.drawable.themed_icon_background_rounded)
         } else {
-            ContextCompat.getDrawable(context, R.drawable.squricle_512_271)
+            getDrawable(context, R.drawable.squricle_512_271)
         }
-        backgroundDrawable?.setTint(ContextCompat.getColor(context, R.color.themed_icon_background))
+        backgroundDrawable?.setTint(getColor(context, R.color.themed_icon_background))
 
         // Tint the monochrome icon with your desired color
         val tintedIcon = monochromeIcon.mutate()
-        tintedIcon.setTint(ContextCompat.getColor(context, R.color.themed_icon_foreground))
+        tintedIcon.setTint(getColor(context, R.color.themed_icon_foreground))
 
         // Create layered drawable with background and scaled foreground
         val layerDrawable = LayerDrawable(arrayOf(backgroundDrawable, tintedIcon))
@@ -198,6 +200,8 @@ class AppDrawerAdapter(
 
         return layerDrawable
     }
+
+
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         if (position >= appList.size) return
@@ -228,7 +232,14 @@ class AppDrawerAdapter(
             if (SharedPreferencesManager.isThemedIconsEnabled(context)) {
                 holder.icon.setImageDrawable(loadThemedIcon(app))
             } else {
-                holder.icon.setImageDrawable(app.loadIcon(pm))
+                if (SharedPreferencesManager.getAppIconShape(context) == "round") {
+                    holder.icon.setImageDrawable(app.loadIcon(pm))
+                    holder.icon.shapeAppearanceModel = ShapeAppearanceModel.builder()
+                        .setAllCornerSizes(RelativeCornerSize(0.53f))
+                        .build()
+                } else {
+                    holder.icon.setImageDrawable(app.loadIcon(pm))
+                }
             }
 
             if (SharedPreferencesManager.isShowMiniAppNameEnabled(context)) {
@@ -389,3 +400,8 @@ class AppDrawerAdapter(
 
     fun getApps(): List<ApplicationInfo> = appList.toList()
 }
+
+data class IconLayers(
+    val background: Drawable?,
+    val foreground: Drawable?
+)

@@ -9,7 +9,7 @@ object SharedPreferencesManager {
     private const val KEY_GLOBAL_TIMER_ENABLED = "global_timer_enabled"
     private const val KEY_SWITCH_TRACK_ENABLED = "switch_track_enabled"
     private const val KEY_SWIPE_TO_LOCK_ENABLED = "swipe_to_lock_enabled"
-    private const val KEY_SWIPE_TO_SETTINGS_ENABLED = "swipe_to_settings_enabled"
+//    private const val KEY_SWIPE_TO_SETTINGS_ENABLED = "swipe_to_settings_enabled"
     private const val KEY_DOUBLE_TAP_TO_LOCK_ENABLED = "double_tap_to_lock_enabled"
     private const val KEY_IS_ONE_MIN_TOAST_SHOWN = "one_min_toast_shown"
     private const val KEY_IS_VISIBILITY_TOGGLE_ENABLED = "visibility_toggle_enabled"
@@ -62,9 +62,9 @@ object SharedPreferencesManager {
         return getPrefs(context).getBoolean(KEY_SWIPE_TO_LOCK_ENABLED, false)
     }
 
-    fun isSwipeToSettingsEnabled(context: Context): Boolean {
-        return getPrefs(context).getBoolean(KEY_SWIPE_TO_SETTINGS_ENABLED, false)
-    }
+//    fun isSwipeToSettingsEnabled(context: Context): Boolean {
+//        return getPrefs(context).getBoolean(KEY_SWIPE_TO_SETTINGS_ENABLED, false)
+//    }
 
     fun isDoubleTapToLockEnabled(context: Context): Boolean {
         return getPrefs(context).getBoolean(KEY_DOUBLE_TAP_TO_LOCK_ENABLED, false)
@@ -74,9 +74,9 @@ object SharedPreferencesManager {
         getPrefs(context).edit().putBoolean(KEY_SWIPE_TO_LOCK_ENABLED, enabled).apply()
     }
 
-    fun setSwipeToSettingsEnabled(context: Context, enabled: Boolean) {
-        getPrefs(context).edit().putBoolean(KEY_SWIPE_TO_SETTINGS_ENABLED, enabled).apply()
-    }
+//    fun setSwipeToSettingsEnabled(context: Context, enabled: Boolean) {
+//        getPrefs(context).edit().putBoolean(KEY_SWIPE_TO_SETTINGS_ENABLED, enabled).apply()
+//    }
 
     fun setDoubleTapToLockEnabled(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_DOUBLE_TAP_TO_LOCK_ENABLED, enabled).apply()
