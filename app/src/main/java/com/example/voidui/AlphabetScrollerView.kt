@@ -37,6 +37,8 @@ class AlphabetScrollerView @JvmOverloads constructor(
     // Add this property for gradient updates
     private var gradientUpdateListener: GradientUpdateListener? = null
 
+    private var appListAdapter: AppListAdapter? = null
+
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER
@@ -45,6 +47,11 @@ class AlphabetScrollerView @JvmOverloads constructor(
     // Add this setter method
     fun setGradientUpdateListener(listener: GradientUpdateListener) {
         this.gradientUpdateListener = listener
+    }
+
+    // Add this setter method for the adapter
+    fun setAppListAdapter(adapter: AppListAdapter) {
+        this.appListAdapter = adapter
     }
 
     fun setup(
@@ -135,12 +142,19 @@ class AlphabetScrollerView @JvmOverloads constructor(
                 val selectedChar = usedAlphabets[index]
                 if (index != lastIndex) {
                     indexMap[selectedChar]?.let {
-                        layoutManager?.scrollToPositionWithOffset(it, 0)
+                        if (index == 0) {
+                            layoutManager?.scrollToPositionWithOffset(it, 0)
+                        } else {
+                            layoutManager?.scrollToPositionWithOffset(it - 3, 0)
+                        }
 
                         post {
                             gradientUpdateListener?.updateGradients()
                         }
                     }
+
+                    // Apply dimming effect to the adapter
+                    appListAdapter?.setSelectedLetter(selectedChar)
 
 //                    staticScroll(index)                      // STATIC SCROLL BAR WITH AN INDICATOR
 //                    staticAnimatedScroll(index)              // STATIC ANIMATED SCROLL BAR WITH AN INDICATOR
@@ -179,6 +193,9 @@ class AlphabetScrollerView @JvmOverloads constructor(
 
                 lastIndex = -1
                 floatingBubble?.visibility = View.GONE
+
+                // Clear dimming effect when touch ends
+                appListAdapter?.clearSelection()
             }
         }
         return true

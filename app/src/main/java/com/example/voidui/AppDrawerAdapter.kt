@@ -8,8 +8,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.drawable.AdaptiveIconDrawable
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -143,6 +149,74 @@ class AppDrawerAdapter(
         return if (position < appList.size && appList[position].packageName == DROP_INDICATOR_PACKAGE) 1 else 0
     }
 
+    private fun loadRegularIcon(app: ApplicationInfo): Drawable {
+        return try {
+            val regularIcon = app.loadIcon(pm)
+            applyShapedIconStyling(regularIcon)
+        } catch (e: Exception) {
+            app.loadIcon(pm)
+        }
+    }
+
+    private fun applyShapedIconStyling(regularIcon: Drawable): Drawable {
+        // Create a bitmap from the regular icon
+        val iconBitmap = drawableToBitmap(regularIcon)
+
+        // Create a shaped bitmap
+        val shapedBitmap = createShapedBitmap(iconBitmap)
+
+        return BitmapDrawable(context.resources, shapedBitmap)
+    }
+
+    private fun drawableToBitmap(drawable: Drawable): Bitmap {
+        if (drawable is BitmapDrawable) {
+            return drawable.bitmap
+        }
+
+        val bitmap = Bitmap.createBitmap(
+            drawable.intrinsicWidth.takeIf { it > 0 } ?: 512,
+            drawable.intrinsicHeight.takeIf { it > 0 } ?: 512,
+            Bitmap.Config.ARGB_8888
+        )
+
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
+    }
+
+    private fun createShapedBitmap(originalBitmap: Bitmap): Bitmap {
+        val size = maxOf(originalBitmap.width, originalBitmap.height)
+        println(size)
+        val outputBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(outputBitmap)
+
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+        // Create perfect circular path
+        val path = Path()
+        val radius = size / 2.1f
+        path.addCircle(size / 2f, size / 2f, radius, Path.Direction.CW)
+
+        // Clip canvas to the circular shape
+        canvas.clipPath(path)
+
+        // Scale and center the original bitmap
+        val scale = size.toFloat() / maxOf(originalBitmap.width, originalBitmap.height)
+        val scaledWidth = originalBitmap.width * scale
+        val scaledHeight = originalBitmap.height * scale
+        val left = (size - scaledWidth) / 2f
+        val top = (size - scaledHeight) / 2f
+
+        val matrix = Matrix()
+        matrix.setScale(scale, scale)
+        matrix.postTranslate(left, top)
+
+        canvas.drawBitmap(originalBitmap, matrix, paint)
+
+        return outputBitmap
+    }
+
     private fun loadThemedIcon(app: ApplicationInfo): Drawable {
         return try {
             val monochromeIcon = getMonochromeIcon(app)
@@ -171,7 +245,7 @@ class AppDrawerAdapter(
                 // Fallback: Check if app has ic_launcher_monochrome drawable
                 val resources = pm.getResourcesForApplication(app)
                 val id = resources.getIdentifier("ic_launcher_monochrome", "drawable", app.packageName)
-                if (id != 0) ContextCompat.getDrawable(context, id) else null
+                if (id != 0) getDrawable(context, id) else null
             }
         } catch (e: Exception) {
             null
@@ -233,10 +307,7 @@ class AppDrawerAdapter(
                 holder.icon.setImageDrawable(loadThemedIcon(app))
             } else {
                 if (SharedPreferencesManager.getAppIconShape(context) == "round") {
-                    holder.icon.setImageDrawable(app.loadIcon(pm))
-                    holder.icon.shapeAppearanceModel = ShapeAppearanceModel.builder()
-                        .setAllCornerSizes(RelativeCornerSize(0.53f))
-                        .build()
+                    holder.icon.setImageDrawable(loadRegularIcon(app))
                 } else {
                     holder.icon.setImageDrawable(app.loadIcon(pm))
                 }

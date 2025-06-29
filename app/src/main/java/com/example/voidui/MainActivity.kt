@@ -37,7 +37,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlin.math.abs
 
-class MainActivity: AppCompatActivity(), GradientUpdateListener {
+class MainActivity : AppCompatActivity(), GradientUpdateListener {
     private lateinit var recyclerView: RecyclerView
     private lateinit var listAdapter: AppListAdapter
     private lateinit var gestureDetector: GestureDetector
@@ -155,14 +155,16 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
         }
 
         drawerRecyclerView.apply {
-            layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
+            layoutManager =
+                LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
             addItemDecoration(centerSpacing)
             adapter = drawerAdapter
 //            itemAnimator = DrawerItemAnimator() // Custom animator for smooth transitions
             itemAnimator = null // Remove animations
 
             // Ensure proper initial layout
-            viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+            viewTreeObserver.addOnGlobalLayoutListener(object :
+                ViewTreeObserver.OnGlobalLayoutListener {
                 override fun onGlobalLayout() {
                     viewTreeObserver.removeOnGlobalLayoutListener(this)
                     post {
@@ -203,14 +205,20 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
                     val y = event.y.toInt()
                     val recyclerView = view as RecyclerView
                     val draggedApp = event.localState as ApplicationInfo
-                    val isAppFromDrawer = drawerAdapter.getApps().any { it.packageName == draggedApp.packageName }
+                    val isAppFromDrawer =
+                        drawerAdapter.getApps().any { it.packageName == draggedApp.packageName }
                     val drawerSize = SharedPreferencesManager.getMiniAppDrawerCount(this)
-                    val currentRealApps = drawerAdapter.getApps().count { it.packageName != AppDrawerAdapter.DROP_INDICATOR_PACKAGE }
+                    val currentRealApps = drawerAdapter.getApps()
+                        .count { it.packageName != AppDrawerAdapter.DROP_INDICATOR_PACKAGE }
 
                     // Check if we can add more apps
                     if (!isAppFromDrawer && currentRealApps >= drawerSize) {
                         if (!toastShownThisDrag) {
-                            Toast.makeText(this, "Cannot add more than $drawerSize apps", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this,
+                                "Cannot add more than $drawerSize apps",
+                                Toast.LENGTH_SHORT
+                            ).show()
                             shouldMoveIndicator = false
                             toastShownThisDrag = true
                         }
@@ -228,7 +236,8 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
 
                         // Check if drag point is within the bounds of this child
                         if (x >= child.left && x <= child.right &&
-                            y >= child.top && y <= child.bottom) {
+                            y >= child.top && y <= child.bottom
+                        ) {
                             hoveredChild = child
                             hoveredPosition = recyclerView.getChildAdapterPosition(child)
                             break
@@ -304,9 +313,11 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
 
                     drawerAdapter.removeDropIndicator()
 
-                    val isAppFromDrawer = drawerAdapter.getApps().any { it.packageName == draggedApp.packageName }
+                    val isAppFromDrawer =
+                        drawerAdapter.getApps().any { it.packageName == draggedApp.packageName }
                     val drawerSize = SharedPreferencesManager.getMiniAppDrawerCount(this)
-                    val currentRealApps = drawerAdapter.getApps().count { it.packageName != AppDrawerAdapter.DROP_INDICATOR_PACKAGE }
+                    val currentRealApps = drawerAdapter.getApps()
+                        .count { it.packageName != AppDrawerAdapter.DROP_INDICATOR_PACKAGE }
 
                     if (view == drawerRecyclerView) {
                         if (!isAppFromDrawer && currentRealApps >= drawerSize) {
@@ -327,7 +338,9 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
                         }
                     }
 
-                    saveDrawerApps(drawerAdapter.getApps().filter { it.packageName != AppDrawerAdapter.DROP_INDICATOR_PACKAGE })
+                    saveDrawerApps(
+                        drawerAdapter.getApps()
+                            .filter { it.packageName != AppDrawerAdapter.DROP_INDICATOR_PACKAGE })
                     saveListApps(listAdapter.getApps())
 
                     // Force layout refresh
@@ -355,10 +368,13 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
                     val app = event.localState as ApplicationInfo
                     drawerAdapter.removeApp(app)
                     listAdapter.addApp(app)
-                    saveDrawerApps(drawerAdapter.getApps().filter { it.packageName != AppDrawerAdapter.DROP_INDICATOR_PACKAGE })
+                    saveDrawerApps(
+                        drawerAdapter.getApps()
+                            .filter { it.packageName != AppDrawerAdapter.DROP_INDICATOR_PACKAGE })
                     saveListApps(listAdapter.getApps())
                     true
                 }
+
                 else -> true
             }
         }
@@ -418,7 +434,7 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
                     listAdapter.addApp(app)
                 }
                 saveListApps(listAdapter.getApps())
-            } else{
+            } else {
                 for (app in loadDrawerApps()) {
                     listAdapter.removeApp(app)
                 }
@@ -458,21 +474,25 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
     }
 
     private fun setupAlphabetScroller() {
-        if (!SharedPreferencesManager.isAppDrawerEnabled(this)) {
-            val scroller = findViewById<AlphabetScrollerView>(R.id.alphabetScroller)
-            val apps = listAdapter.getApps()
-            val usedAlphabets = apps.map {
-                normalizeAppName(it.loadLabel(packageManager).toString()).first().uppercaseChar()
-            }.distinct().sorted()
-            val indexMap = getAlphabetIndexMap(apps)
-            val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+        val scroller = findViewById<AlphabetScrollerView>(R.id.alphabetScroller)
+        val apps = listAdapter.getApps()
+        val usedAlphabets = apps.map {
+            normalizeAppName(it.loadLabel(packageManager).toString()).first().uppercaseChar()
+        }.distinct().sorted()
+        val indexMap = getAlphabetIndexMap(apps)
+        val layoutManager = recyclerView.layoutManager as LinearLayoutManager
 
 //            scroller.setup(usedAlphabets, indexMap, layoutManager, bubbleBackground)
 
-            scroller.setup(usedAlphabets, indexMap, layoutManager)
-            scroller.enableFloatingBubble(findViewById(R.id.layoutMainActivity))
-            scroller.setGradientUpdateListener(this)   // IMPORTANT: Set the gradient update listener
-        }
+        scroller.setup(usedAlphabets, indexMap, layoutManager)
+        scroller.enableFloatingBubble(findViewById(R.id.layoutMainActivity))
+        scroller.setGradientUpdateListener(this)   // IMPORTANT: Set the gradient update listener
+
+        // NEW: Connect the adapter to the scroller for dimming functionality
+        scroller.setAppListAdapter(listAdapter)
+
+        // PERFORMANCE: Set RecyclerView reference for ultra-fast direct updates
+        listAdapter.setRecyclerView(recyclerView)
     }
 
 //    private fun setupGradientOverlay() {
@@ -572,7 +592,7 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
         gradientOverlay?.updateGradients(topAlpha, bottomAlpha)
     }
 
-    fun RecyclerView.calculateGradientAlphas(): Pair<Float, Float> {
+    private fun RecyclerView.calculateGradientAlphas(): Pair<Float, Float> {
         val layoutManager = this.layoutManager as? LinearLayoutManager ?: return 0f to 1f
 
         // Check if we can scroll up (not at top)
@@ -593,6 +613,7 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
                 val viewHeight = firstVisibleView.height
                 if (offset >= 0) 0f else (-offset.toFloat() / (viewHeight * 0.5f)).coerceIn(0f, 1f)
             }
+
             else -> 1f // Scrolled down significantly
         }
 
@@ -608,7 +629,10 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
                     // Near bottom, calculate based on last item offset
                     val offset = lastVisibleView.bottom - height
                     val viewHeight = lastVisibleView.height
-                    if (offset <= 0) 0f else (offset.toFloat() / (viewHeight * 0.5f)).coerceIn(0f, 1f)
+                    if (offset <= 0) 0f else (offset.toFloat() / (viewHeight * 0.5f)).coerceIn(
+                        0f,
+                        1f
+                    )
                 } else 1f
             }
         }
@@ -736,7 +760,8 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
             .setView(dialogView)
             .setCancelable(true)
             .create()
-        val appName = normalizeAppName(appInfo.loadLabel(applicationContext.packageManager).toString())
+        val appName =
+            normalizeAppName(appInfo.loadLabel(applicationContext.packageManager).toString())
 
         fun startTimerAndLaunchApp(minutes: Int) {
             if (minutes > 0) {
@@ -861,7 +886,11 @@ class MainActivity: AppCompatActivity(), GradientUpdateListener {
                     }
                 }
             }
-            return listApps.sortedBy { normalizeAppName(it.loadLabel(packageManager).toString()).lowercase() }
+            return listApps.sortedBy {
+                normalizeAppName(
+                    it.loadLabel(packageManager).toString()
+                ).lowercase()
+            }
         }
     }
 

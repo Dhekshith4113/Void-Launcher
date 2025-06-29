@@ -48,14 +48,13 @@ class InAppTimerReminderActivity : AppCompatActivity() {
         val backButton = findViewById<ImageButton>(R.id.backButton)
         backButton.setOnClickListener {
             finish()
-            overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right)
         }
     }
 
     private fun setupAccessibilityLauncher() {
         accessibilityLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
-        ) { result ->
+        ) {
             handleAccessibilityResult()
         }
     }
