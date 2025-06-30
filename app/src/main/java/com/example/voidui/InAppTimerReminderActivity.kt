@@ -1,17 +1,22 @@
 package com.example.voidui
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.os.UserHandle
 import android.os.UserManager
 import android.provider.Settings
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -26,6 +31,7 @@ class InAppTimerReminderActivity : AppCompatActivity() {
     private lateinit var appListLabel: TextView
     private lateinit var viewSettings: View
     private lateinit var appRecyclerView: RecyclerView
+    private lateinit var appTimerLayout: LinearLayout
     private lateinit var adapter: AppToggleAdapter
     private lateinit var accessibilityLauncher: ActivityResultLauncher<Intent>
 
@@ -43,6 +49,7 @@ class InAppTimerReminderActivity : AppCompatActivity() {
         globalToggle = findViewById(R.id.globalToggle)
         appListLabel = findViewById(R.id.applyToText)
         viewSettings = findViewById(R.id.viewSettings)
+        appTimerLayout = findViewById(R.id.appTimerLayout)
         appRecyclerView = findViewById(R.id.appRecyclerView)
 
         val backButton = findViewById<ImageButton>(R.id.backButton)
@@ -93,9 +100,7 @@ class InAppTimerReminderActivity : AppCompatActivity() {
     private fun handleGlobalToggleChange(isChecked: Boolean) {
         if (isChecked) {
             if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
-                // Launch accessibility settings
-                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                accessibilityLauncher.launch(intent)
+                promptAccessibilitySettings(this)
             } else {
                 enableGlobalTimer()
             }
@@ -179,9 +184,7 @@ class InAppTimerReminderActivity : AppCompatActivity() {
 
     private fun updateAppListVisibility(show: Boolean) {
         val visibility = if (show) View.VISIBLE else View.GONE
-        appListLabel.visibility = visibility
-        viewSettings.visibility = visibility
-        appRecyclerView.visibility = visibility
+        appTimerLayout.visibility = visibility
 
         if (!show) {
             AppTimerManager.clearAllTimers()
@@ -236,6 +239,36 @@ class InAppTimerReminderActivity : AppCompatActivity() {
             Log.e("InAppTimerReminder", "Error getting launchable apps", e)
             emptyList()
         }
+    }
+
+    private fun promptAccessibilitySettings(context: Context) {
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_accessibility_prompt, null)
+        val dialog = AlertDialog.Builder(context)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialogView.findViewById<TextView>(R.id.btnOpen).setOnClickListener {
+            val intent = Intent().apply {
+                action = Settings.ACTION_ACCESSIBILITY_SETTINGS
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            }
+            accessibilityLauncher.launch(intent)
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<TextView>(R.id.btnLater).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.setOnDismissListener {
+            SharedPreferencesManager.setGlobalTimerEnabled(this, false)
+            globalToggle.isChecked = false
+            updateAppListVisibility(false)
+            stopTimerService()
+        }
+
+        dialog.show()
     }
 
     override fun onResume() {

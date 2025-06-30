@@ -2,7 +2,6 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="18dp"
@@ -20,7 +19,7 @@
         android:id="@+id/radioGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginVertical="18dp"
+        android:layout_marginTop="18dp"
         android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -152,8 +151,7 @@
         android:id="@+id/miniDrawerAppCount"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginVertical="10dp">
+        android:orientation="horizontal">
 
         <TextView
             android:layout_width="0dp"
@@ -165,8 +163,8 @@
 
         <ImageButton
             android:id="@+id/incrementButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:contentDescription="Add"
             android:src="@drawable/sharp_add_24"
             android:background="@android:color/transparent"
@@ -175,7 +173,7 @@
         <TextView
             android:id="@+id/countTextView"
             android:layout_width="48dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_gravity="center"
             android:gravity="center"
             android:text="0"
@@ -183,8 +181,8 @@
 
         <ImageButton
             android:id="@+id/decrementButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:contentDescription="Remove"
             android:src="@drawable/sharp_remove_24"
             android:background="@android:color/transparent"
@@ -197,6 +195,25 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/divider_grey"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Apply theme for app icons"
+            style="@style/AppBaseText"/>
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/applyThemedIcon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/appIconShape"

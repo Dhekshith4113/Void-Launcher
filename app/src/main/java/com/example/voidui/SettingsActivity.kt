@@ -159,11 +159,7 @@ class SettingsActivity : AppCompatActivity() {
 
                     visibilityToggle?.setOnClickListener {
                         if (!PermissionUtils.hasUsageStatsPermission(context)) {
-                            val intent = Intent().apply {
-                                action = Settings.ACTION_USAGE_ACCESS_SETTINGS
-                                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                            }
-                            usageStatsLauncher.launch(intent)
+                            promptUsageAccessSettings(context)
                         } else {
                             showAppUsageView = !showAppUsageView
                             SharedPreferencesManager.setVisibilityToggleEnabled(context, showAppUsageView)
@@ -399,8 +395,6 @@ class SettingsActivity : AppCompatActivity() {
             .setCancelable(true)
             .create()
 
-        dialogView.findViewById<SwitchCompat>(R.id.applyThemedIcon).isChecked = SharedPreferencesManager.isThemedIconsEnabled(this)
-
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialogView.findViewById<RadioButton>(R.id.radioDark).setOnClickListener {
             val mode = AppCompatDelegate.MODE_NIGHT_YES
@@ -419,9 +413,6 @@ class SettingsActivity : AppCompatActivity() {
             ThemeManager.saveThemeMode(this, mode)
             recreate()
             dialog.dismiss()
-        }
-        dialogView.findViewById<SwitchCompat>(R.id.applyThemedIcon).setOnCheckedChangeListener { _, isChecked ->
-            SharedPreferencesManager.setThemedIconsEnabled(this, isChecked)
         }
 
         when (ThemeManager.getSavedThemeMode(this)) {
@@ -460,11 +451,7 @@ class SettingsActivity : AppCompatActivity() {
             SharedPreferencesManager.setSwitchTrackEnabled(this, isChecked)
             if (isChecked) {
                 if (!PermissionUtils.hasNotificationPermission(this)) {
-                    val intent = Intent().apply {
-                        action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
-                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                    }
-                    notificationLauncher.launch(intent)
+                    promptNotificationSettings(this)
                 } else {
                     SharedPreferencesManager.setSwitchTrackEnabled(this, true)
                     val intentTimer = Intent(this, SpeedMonitorService::class.java)
@@ -568,7 +555,6 @@ class SettingsActivity : AppCompatActivity() {
             .setCancelable(true)
             .create()
 
-//        val settingsSwitch = dialogView.findViewById<SwitchCompat>(R.id.settingsSwitch)
         lockSwitch = dialogView.findViewById(R.id.lockSwitch)
         doubleTapSwitch = dialogView.findViewById(R.id.doubleTapSwitch)
 
@@ -579,33 +565,14 @@ class SettingsActivity : AppCompatActivity() {
 
         lockSwitch?.isChecked = SharedPreferencesManager.isSwipeToLockEnabled(this)
         doubleTapSwitch?.isChecked = SharedPreferencesManager.isDoubleTapToLockEnabled(this)
-//        settingsSwitch.isChecked = SharedPreferencesManager.isSwipeToSettingsEnabled(this)
 
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-
-//        settingsSwitch.setOnCheckedChangeListener { _, isChecked ->
-//            SharedPreferencesManager.setSwipeToSettingsEnabled(this, isChecked)
-//            if (isChecked) {
-//                Toast.makeText(this, "'Swipe left to open settings' is enabled", Toast.LENGTH_SHORT)
-//                    .show()
-//            } else {
-//                Toast.makeText(
-//                    this,
-//                    "'Swipe left to open settings' is disabled",
-//                    Toast.LENGTH_SHORT
-//                ).show()
-//            }
-//        }
 
         lockSwitch?.setOnCheckedChangeListener { _, isChecked ->
             SharedPreferencesManager.setSwipeToLockEnabled(this, isChecked)
             if (isChecked) {
                 if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
-                    val intent = Intent().apply {
-                        action = Settings.ACTION_ACCESSIBILITY_SETTINGS
-                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                    }
-                    accessibilityLauncher.launch(intent)
+                    promptAccessibilitySettings(this)
                 } else {
                     SharedPreferencesManager.setSwipeToLockEnabled(this, true)
                     Toast.makeText(
@@ -625,11 +592,7 @@ class SettingsActivity : AppCompatActivity() {
             SharedPreferencesManager.setDoubleTapToLockEnabled(this, isChecked)
             if (isChecked) {
                 if (!AppAccessibilityService.isAccessibilityServiceEnabled()) {
-                    val intent = Intent().apply {
-                        action = Settings.ACTION_ACCESSIBILITY_SETTINGS
-                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                    }
-                    accessibilityLauncher.launch(intent)
+                    promptAccessibilitySettings(this)
                 } else {
                     SharedPreferencesManager.setDoubleTapToLockEnabled(this, true)
                     Toast.makeText(
@@ -665,7 +628,7 @@ class SettingsActivity : AppCompatActivity() {
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
         dialogView.findViewById<SwitchCompat>(R.id.miniDrawerSwitch).isChecked = SharedPreferencesManager.isMiniDrawerEnabled(this)
-
+        dialogView.findViewById<SwitchCompat>(R.id.applyThemedIcon).isChecked = SharedPreferencesManager.isThemedIconsEnabled(this)
 
         if (SharedPreferencesManager.isAppDrawerEnabled(this)) {
             dialogView.findViewById<RadioButton>(R.id.appListBtn).isChecked = false
@@ -783,6 +746,10 @@ class SettingsActivity : AppCompatActivity() {
             dialogView.findViewById<TextView>(R.id.countTextView).text = count.toString()
         }
 
+        dialogView.findViewById<SwitchCompat>(R.id.applyThemedIcon).setOnCheckedChangeListener { _, isChecked ->
+            SharedPreferencesManager.setThemedIconsEnabled(this, isChecked)
+        }
+
         dialogView.findViewById<RadioButton>(R.id.roundAppIcon).setOnClickListener {
             SharedPreferencesManager.setAppIconShape(this, "round")
         }
@@ -793,6 +760,94 @@ class SettingsActivity : AppCompatActivity() {
 
         dialog.setOnDismissListener {
             SharedPreferencesManager.setRefreshViewEnabled(this, true)
+        }
+
+        dialog.show()
+    }
+
+    private fun promptNotificationSettings(context: Context) {
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_notification_prompt, null)
+        val dialog = AlertDialog.Builder(context)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialogView.findViewById<TextView>(R.id.btnOpen).setOnClickListener {
+            val intent = Intent().apply {
+                action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            }
+            notificationLauncher.launch(intent)
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<TextView>(R.id.btnLater).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.setOnDismissListener {
+            SharedPreferencesManager.setSwitchTrackEnabled(this, false)
+            switchTrack?.isChecked = false
+            val intentTimer = Intent(this, SpeedMonitorService::class.java)
+            stopService(intentTimer)
+        }
+
+        dialog.show()
+    }
+
+    private fun promptUsageAccessSettings(context: Context) {
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_usage_prompt, null)
+        val dialog = AlertDialog.Builder(context)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialogView.findViewById<TextView>(R.id.btnOpen).setOnClickListener {
+            val intent = Intent().apply {
+                action = Settings.ACTION_USAGE_ACCESS_SETTINGS
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            }
+            usageStatsLauncher.launch(intent)
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<TextView>(R.id.btnLater).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.setOnDismissListener {
+            SharedPreferencesManager.setVisibilityToggleEnabled(this, false)
+            visibilityToggle?.setImageResource(R.drawable.visibility_24px)
+        }
+
+        dialog.show()
+    }
+
+    private fun promptAccessibilitySettings(context: Context) {
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_accessibility_prompt, null)
+        val dialog = AlertDialog.Builder(context)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialogView.findViewById<TextView>(R.id.btnOpen).setOnClickListener {
+            val intent = Intent().apply {
+                action = Settings.ACTION_ACCESSIBILITY_SETTINGS
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            }
+            accessibilityLauncher.launch(intent)
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<TextView>(R.id.btnLater).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.setOnDismissListener {
+            SharedPreferencesManager.setSwipeToLockEnabled(this, false)
+            SharedPreferencesManager.setDoubleTapToLockEnabled(this, false)
+            lockSwitch?.isChecked = false
+            doubleTapSwitch?.isChecked = false
         }
 
         dialog.show()

@@ -23,7 +23,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="18dp"
-        android:text="Double tap on mini app drawer\nto lock phone"
+        android:text="Double tap on mini app\ndrawer to lock phone"
         app:layout_constraintBottom_toBottomOf="@+id/doubleTapSwitch"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/doubleTapSwitch" />

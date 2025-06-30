@@ -18,12 +18,9 @@ import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
 import android.view.GestureDetector
 import android.view.LayoutInflater
@@ -33,14 +30,10 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getColor
 import androidx.core.content.ContextCompat.getDrawable
-import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.imageview.ShapeableImageView
-import com.google.android.material.shape.RelativeCornerSize
-import com.google.android.material.shape.ShapeAppearanceModel
 
 class AppDrawerAdapter(
     private val context: Context,
@@ -98,7 +91,7 @@ class AppDrawerAdapter(
 
         private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                val position = adapterPosition
+                val position = absoluteAdapterPosition
                 if (position == RecyclerView.NO_POSITION || position >= appList.size) return false
 
                 val app = appList[position]
@@ -119,7 +112,7 @@ class AppDrawerAdapter(
             }
 
             override fun onDoubleTap(e: MotionEvent): Boolean {
-                val position = adapterPosition
+                val position = absoluteAdapterPosition
                 if (position == RecyclerView.NO_POSITION || position >= appList.size) return false
 
                 val app = appList[position]
@@ -241,11 +234,6 @@ class AppDrawerAdapter(
                 } else null
             } else {
                 null
-            } ?: run {
-                // Fallback: Check if app has ic_launcher_monochrome drawable
-                val resources = pm.getResourcesForApplication(app)
-                val id = resources.getIdentifier("ic_launcher_monochrome", "drawable", app.packageName)
-                if (id != 0) getDrawable(context, id) else null
             }
         } catch (e: Exception) {
             null
@@ -471,8 +459,3 @@ class AppDrawerAdapter(
 
     fun getApps(): List<ApplicationInfo> = appList.toList()
 }
-
-data class IconLayers(
-    val background: Drawable?,
-    val foreground: Drawable?
-)

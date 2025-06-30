@@ -31,7 +31,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -49,10 +48,6 @@ class MainActivity : AppCompatActivity(), GradientUpdateListener {
     private var toastShownThisDrag = false
     private var shouldMoveIndicator = true
     private var gradientOverlay: GradientOverlayView? = null
-
-    private val bubbleBackground by lazy {
-        ContextCompat.getDrawable(this, R.drawable.bubble_background)
-    }
 
     @SuppressLint("ClickableViewAccessibility")
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)

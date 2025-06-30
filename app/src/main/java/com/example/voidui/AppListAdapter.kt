@@ -15,7 +15,6 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Point
-import android.graphics.RectF
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
@@ -34,8 +33,6 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.imageview.ShapeableImageView
-import com.google.android.material.shape.RelativeCornerSize
-import com.google.android.material.shape.ShapeAppearanceModel
 import java.lang.ref.WeakReference
 
 class AppListAdapter(
@@ -50,10 +47,8 @@ class AppListAdapter(
     private var newAppPackages: Set<String> = emptySet()
     private var selectedLetter: Char? = null // Track selected letter for dimming
 
-    // Cache for normalized app names to avoid repeated computation
-    private val normalizedNameCache = mutableMapOf<String, String>()
-    // Cache for first letters to avoid repeated computation
-    private val firstLetterCache = mutableMapOf<String, Char>()
+    private val normalizedNameCache = mutableMapOf<String, String>()  // Cache for normalized app names to avoid repeated computation
+    private val firstLetterCache = mutableMapOf<String, Char>() // Cache for first letters to avoid repeated computation
 
     companion object {
         private const val VIEW_TYPE_LIST = 0
@@ -66,12 +61,11 @@ class AppListAdapter(
         val name: TextView = itemView.findViewById(R.id.appName)
         val newAppName: TextView? = itemView.findViewById(R.id.newText)
 
-        // Store current dimming state to avoid unnecessary updates
-        private var isDimmed = false
+        private var isDimmed = false    // Store current dimming state to avoid unnecessary updates
 
         private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                val app = apps[adapterPosition]
+                val app = apps[absoluteAdapterPosition]
                 val globalToggle = SharedPreferencesManager.isGlobalTimerEnabled(context)
                 val appToggle = SharedPreferencesManager.isAppToggleEnabled(context, app.packageName)
 
@@ -87,7 +81,7 @@ class AppListAdapter(
             }
 
             override fun onDoubleTap(e: MotionEvent): Boolean {
-                showAppOptionsDialog(context, apps[adapterPosition])
+                showAppOptionsDialog(context, apps[absoluteAdapterPosition])
                 return true
             }
         })
@@ -105,15 +99,9 @@ class AppListAdapter(
                 isDimmed = shouldDim
                 val alpha = if (shouldDim) 0.2f else 1.0f
 
-                // Instant alpha change for maximum performance
                 icon.alpha = alpha
                 name.alpha = alpha
                 newAppName?.alpha = alpha
-
-                // Animate alpha change for smoother UX (optional)
-//                icon.animate().alpha(alpha).setDuration(150).start()
-//                name.animate().alpha(alpha).setDuration(150).start()
-//                newAppName?.animate()?.alpha(alpha)?.setDuration(150)?.start()
             }
         }
     }
@@ -157,7 +145,7 @@ class AppListAdapter(
             for (i in 0 until rv.childCount) {
                 val child = rv.getChildAt(i)
                 val viewHolder = rv.getChildViewHolder(child) as? ViewHolder
-                val position = viewHolder?.adapterPosition ?: continue
+                val position = viewHolder?.absoluteAdapterPosition ?: continue
 
                 if (position >= 0 && position < apps.size) {
                     val shouldDim = shouldDimApp(apps[position])
@@ -284,8 +272,7 @@ class AppListAdapter(
             if (monochromeIcon != null) {
                 applyThemedIconStyling(monochromeIcon)
             } else {
-                // Fallback to regular icon
-                app.loadIcon(pm)
+                app.loadIcon(pm)    // Fallback to regular icon
             }
         } catch (e: Exception) {
             app.loadIcon(pm)
@@ -302,11 +289,6 @@ class AppListAdapter(
                 } else null
             } else {
                 null
-            } ?: run {
-                // Fallback: Check if app has ic_launcher_monochrome drawable
-                val resources = pm.getResourcesForApplication(app)
-                val id = resources.getIdentifier("ic_launcher_monochrome", "drawable", app.packageName)
-                if (id != 0) ContextCompat.getDrawable(context, id) else null
             }
         } catch (e: Exception) {
             null
@@ -525,11 +507,6 @@ class AppIconDragShadowBuilder(val context: Context, appInfo: ApplicationInfo, p
                 } else null
             } else {
                 null
-            } ?: run {
-                // Fallback: Check if app has ic_launcher_monochrome drawable
-                val resources = pm.getResourcesForApplication(app)
-                val id = resources.getIdentifier("ic_launcher_monochrome", "drawable", app.packageName)
-                if (id != 0) ContextCompat.getDrawable(context, id) else null
             }
         } catch (e: Exception) {
             null

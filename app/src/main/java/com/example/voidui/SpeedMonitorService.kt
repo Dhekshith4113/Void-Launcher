@@ -34,8 +34,6 @@ class SpeedMonitorService : Service() {
                 notificationHelper.buildNetStatNotification("0", "0", "0", "0", "")
             )
             startSpeedMonitoring()
-
-            requestIgnoreBatteryOptimizations()
         }
         return START_STICKY
     }
@@ -119,27 +117,6 @@ class SpeedMonitorService : Service() {
             mbps >= 1 -> DecimalFormat("#.##").format(mbps) + " MB/s"
             kbps >= 1 -> DecimalFormat("###").format(kbps) + " KB/s"
             else -> DecimalFormat("###").format(bytesPerSec) + " B/s"
-        }
-    }
-
-    private fun requestIgnoreBatteryOptimizations() {
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        val packageName = applicationContext.packageName
-
-        // Respect user choice: Don't show again if they've dismissed or allowed
-        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-        val ignorePrompt = prefs.getBoolean("battery_opt_ignore_prompt", false)
-        if (ignorePrompt) return
-
-        if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-            // Show a notification or launch Activity to explain, if needed
-            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            startActivity(intent)
-
-            // Optional: Save that we already prompted them once
-            prefs.edit().putBoolean("battery_opt_ignore_prompt", true).apply()
         }
     }
 
