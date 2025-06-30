@@ -13,9 +13,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.UserHandle
 import android.os.UserManager
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.util.Log
 import android.view.DragEvent
 import android.view.GestureDetector
@@ -380,7 +377,6 @@ class MainActivity : AppCompatActivity(), GradientUpdateListener {
                     val child = drawerRecyclerView.findChildViewUnder(e.x, e.y)
                     return if (child == null) {
                         if (SharedPreferencesManager.isDoubleTapToLockEnabled(this@MainActivity)) {
-                            vibratePhone(100)
                             AppAccessibilityService.lockNowWithAccessibility()
                         } else {
                             Toast.makeText(
@@ -903,18 +899,6 @@ class MainActivity : AppCompatActivity(), GradientUpdateListener {
         return normalized
     }
 
-    private fun vibratePhone(millis: Long) {
-        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager =
-                getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            vibratorManager.defaultVibrator
-        } else {
-            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        }
-
-        vibrator.vibrate(VibrationEffect.createOneShot(millis, VibrationEffect.DEFAULT_AMPLITUDE))
-    }
-
     private fun isDefaultLauncher(context: Context): Boolean {
         val pm = context.packageManager
         val intent = Intent(Intent.ACTION_MAIN).apply {
@@ -959,15 +943,6 @@ class MainActivity : AppCompatActivity(), GradientUpdateListener {
             ) {
                 if (diffX < 0 && e1.x > screenWidth - edgeSwipeThreshold) {
                     // Swiped left (right → left)
-//                    if (SharedPreferencesManager.isSwipeToSettingsEnabled(this@MainActivity)) {
-//                        openSettings()
-//                    } else {
-//                        Toast.makeText(
-//                            this@MainActivity,
-//                            "Enable 'Swipe left to open settings' in Gestures",
-//                            Toast.LENGTH_SHORT
-//                        ).show()
-//                    }
                     openSettings()
                     return true
                 }
@@ -975,7 +950,6 @@ class MainActivity : AppCompatActivity(), GradientUpdateListener {
                 if (diffX > 0 && e1.x < edgeSwipeThreshold) {
                     // Swipe right → Lock screen
                     if (SharedPreferencesManager.isSwipeToLockEnabled(this@MainActivity)) {
-                        vibratePhone(100)
                         AppAccessibilityService.lockNowWithAccessibility()
                     } else {
                         Toast.makeText(

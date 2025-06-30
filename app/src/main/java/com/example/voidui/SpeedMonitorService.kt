@@ -7,8 +7,6 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.IBinder
-import android.os.PowerManager
-import android.provider.Settings
 import android.util.Log
 import kotlinx.coroutines.*
 import java.text.DecimalFormat
@@ -84,17 +82,6 @@ class SpeedMonitorService : Service() {
             wifiInfo.rssi
         } else {
             null
-        }
-    }
-
-    private fun rssiToPercentage(rssi: Int): Int {
-        val minRssi = -100
-        val maxRssi = -30
-
-        return when {
-            rssi <= minRssi -> 0
-            rssi >= maxRssi -> 100
-            else -> ((rssi - minRssi) * 100 / (maxRssi - minRssi))
         }
     }
 

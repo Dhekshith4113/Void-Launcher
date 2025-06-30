@@ -89,10 +89,6 @@ object SharedPreferencesManager {
         getPrefs(context).edit().putBoolean(KEY_IS_VISIBILITY_TOGGLE_ENABLED, enabled).apply()
     }
 
-    fun isHomeLauncher(context: Context): Boolean {
-        return getPrefs(context).getBoolean(KEY_IS_HOME_LAUNCHER, false)
-    }
-
     fun setHomeLauncher(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_IS_HOME_LAUNCHER, enabled).apply()
     }

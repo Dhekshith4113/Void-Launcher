@@ -452,12 +452,6 @@ class AppListAdapter(
         return apps.toList()
     }
 
-    // Method to clear caches if memory is needed
-    fun clearCaches() {
-        normalizedNameCache.clear()
-        firstLetterCache.clear()
-    }
-
 }
 
 class AppIconDragShadowBuilder(val context: Context, appInfo: ApplicationInfo, private val pm: PackageManager) : View.DragShadowBuilder() {
